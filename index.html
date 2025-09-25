@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Content Creator Assistant – Hashtag Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- ----------  DESIGN TOKENS  ---------- -->
+  <style>
+    :root{
+      /* colours */
+      --clr-bg:#f0f2f5;
+      --clr-surface:#ffffff;
+      --clr-primary:#0066ff;
+      --clr-primary-dark:#0043b5;
+      --clr-success:#10b981;
+      --clr-danger:#ef4444;
+      --clr-text:#111827;
+      --clr-text-secondary:#6b7280;
+      --clr-border:#e5e7eb;
+
+      /* dark mode */
+      --clr-bg-dark:#0f172a;
+      --clr-surface-dark:#1e293b;
+      --clr-text-dark:#f3f4f6;
+      --clr-border-dark:#334155;
+
+      /* spacing */
+      --space-xs:.25rem;
+      --space-sm:.5rem;
+      --space-md:1rem;
+      --space-lg:1.5rem;
+      --space-xl:2rem;
+      --space-2xl:3rem;
+
+      /* typography */
+      --font-base:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+      --fw-normal:400;
+      --fw-semibold:600;
+      --fw-bold:700;
+
+      /* radius & shadows */
+      --radius:.75rem;
+      --shadow-sm:0 1px 2px 0 rgb(0 0 0 / .05);
+      --shadow-md:0 4px 6px -1px rgb(0 0 0 / .1),0 2px 4px -2px rgb(0 0 0 / .1);
+      --shadow-lg:0 10px 15px -3px rgb(0 0 0 / .1),0 4px 6px -4px rgb(0 0 0 / .1);
+      --shadow-xl:0 20px 25px -5px rgb(0 0 0 / .1),0 8px 10px -6px rgb(0 0 0 / .1);
+
+      /* animations */
+      --transition:.3s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* dark mode auto-switch */
+    @media (prefers-color-scheme:dark){
+      :root{
+        --clr-bg:var(--clr-bg-dark);
+        --clr-surface:var(--clr-surface-dark);
+        --clr-text:var(--clr-text-dark);
+        --clr-border:var(--clr-border-dark);
+      }
+    }
+
+    /* ----------  RESET  ---------- */
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{
+      font-family:var(--font-base);
+      background:var(--clr-bg);
+      color:var(--clr-text);
+      line-height:1.6;
+      -webkit-font-smoothing:antialiased;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+    img,picture,svg{display:block;max-width:100%;}
+    input,textarea,button{font:inherit;}
+
+    /* ----------  LAYOUT  ---------- */
+    .wrapper{
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:var(--space-lg);
+    }
+    header,footer{
+      background:var(--clr-surface);
+      border-bottom:1px solid var(--clr-border);
+      padding:var(--space-lg) var(--space-xl);
+    }
+    footer{
+      border-bottom:none;
+      border-top:1px solid var(--clr-border);
+      text-align:center;
+      font-size:.875rem;
+      color:var(--clr-text-secondary);
+    }
+    .header-inner{
+      max-width:1100px;
+      margin:0 auto;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:var(--space-md);
+    }
+    .logo{
+      font-weight:var(--fw-bold);
+      font-size:1.25rem;
+      letter-spacing:-.025em;
+    }
+    .badge{
+      background:var(--clr-primary);
+      color:#fff;
+      font-size:.75rem;
+      padding:var(--space-xs) var(--space-sm);
+      border-radius:9999px;
+    }
+
+    /* ----------  COMPONENT – CARD  ---------- */
+    .card{
+      background:var(--clr-surface);
+      border:1px solid var(--clr-border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow-xl);
+      width:100%;
+      max-width:600px;
+      padding:var(--space-2xl);
+    }
+    .card__title{
+      font-size:1.75rem;
+      font-weight:var(--fw-bold);
+      margin-bottom:var(--space-md);
+      letter-spacing:-.025em;
+    }
+    .card__body{
+      display:grid;
+      gap:var(--space-lg);
+    }
+
+    /* ----------  COMPONENT – TEXTAREA  ---------- */
+    .textarea{
+      width:100%;
+      min-height:140px;
+      resize:none;
+      padding:var(--space-md) var(--space-lg);
+      border:1px solid var(--clr-border);
+      border-radius:calc(var(--radius) - 2px);
+      background:transparent;
+      color:var(--clr-text);
+      transition:var(--transition);
+    }
+    .textarea:focus{
+      outline:none;
+      border-color:var(--clr-primary);
+      box-shadow:0 0 0 3px rgb(0 102 255 / .15);
+    }
+
+    /* ----------  COMPONENT – BUTTON  ---------- */
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:var(--space-sm);
+      padding:var(--space-md) var(--space-xl);
+      font-weight:var(--fw-semibold);
+      border-radius:calc(var(--radius) - 2px);
+      border:none;
+      cursor:pointer;
+      transition:var(--transition);
+    }
+    .btn-primary{
+      background:var(--clr-primary);
+      color:#fff;
+    }
+    .btn-primary:hover{background:var(--clr-primary-dark);}
+    .btn:disabled{opacity:.6;cursor:not-allowed;}
+
+    /* ----------  COMPONENT – TAG LIST  ---------- */
+    .tag-list{
+      display:flex;
+      flex-wrap:wrap;
+      gap:var(--space-sm);
+      margin-top:var(--space-md);
+      max-height:220px;
+      overflow-y:auto;
+      padding:var(--space-sm);
+      border:1px dashed var(--clr-border);
+      border-radius:calc(var(--radius) - 2px);
+    }
+    .tag{
+      background:var(--clr-primary);
+      color:#fff;
+      font-size:.875rem;
+      font-weight:var(--fw-semibold);
+      padding:var(--space-xs) var(--space-sm);
+      border-radius:9999px;
+      white-space:nowrap;
+    }
+
+    /* ----------  COPY BUTTON  ---------- */
+    .copy-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:var(--space-md);
+      margin-top:var(--space-md);
+    }
+    .copy-btn{
+      display:inline-flex;
+      align-items:center;
+      gap:var(--space-sm);
+      background:var(--clr-success);
+      color:#fff;
+      border:none;
+      padding:var(--space-sm) var(--space-md);
+      border-radius:calc(var(--radius) - 4px);
+      cursor:pointer;
+      transition:var(--transition);
+    }
+    .copy-btn:hover{background:#059669;}
+    .copy-btn svg{
+      width:18px;height:18px;
+      fill:currentColor;
+    }
+
+    /* ----------  STATE – LOADING  ---------- */
+    .loading-dots span{
+      display:inline-block;
+      width:6px;height:6px;
+      margin:0 2px;
+      background:currentColor;
+      border-radius:50%;
+      animation:dot 1.4s infinite ease-in-out both;
+    }
+    .loading-dots span:nth-child(1){animation-delay:-.32s;}
+    .loading-dots span:nth-child(2){animation-delay:-.16s;}
+    @keyframes dot{
+      0%,80%,100%{transform:scale(0);}
+      40%{transform:scale(1);}
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ==================  HEADER  ================== -->
+  <header>
+    <div class="header-inner">
+      <div class="logo">Content Creator Assistant</div>
+      <div class="badge">Powered by <span style="color:#4285F4;">G</span>
+<span  style="color:#EA4335;">o</span>
+<span style="color:#FBBC05;">o</span>
+<span style="color:#4285F4;">g</span>
+<span style="color:#34A853;">l</span>
+<span style="color:#EA4335;">e</span>
+</div>
+    </div>
+  </header>
+
+  <!-- ==================  MAIN  ================== -->
+  <div class="wrapper">
+    <section class="card">
+      <h1 class="card__title">Hashtag Generator</h1>
+
+      <div class="card__body">
+        <textarea id="content"
+                  class="textarea"
+                  placeholder="Paste your caption / content here…"></textarea>
+
+        <button id="generateBtn" class="btn btn-primary">
+          Generate Hashtags
+        </button>
+
+        <!-- OUTPUT AREA -->
+        <div id="response" class="tag-list" hidden></div>
+
+        <div id="copyRow" class="copy-row" hidden>
+          <span style="color:var(--clr-text-secondary);font-size:.875rem;">
+            Generated <span id="tagCount">0</span> hashtags
+          </span>
+          <button id="copyBtn" class="copy-btn">
+            <!-- clipboard icon -->
+            <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+            <span>Copy all</span>
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ==================  FOOTER  ================== -->
+  <footer>
+    © <span id="year"></span> Content Creator Assistant • Sponsored by Gemini AI
+  </footer>
+
+  <!-- ==================  JS  ================== -->
+  <script>
+    const btn       = document.getElementById('generateBtn');
+    const out       = document.getElementById('response');
+    const input     = document.getElementById('content');
+    const copyRow   = document.getElementById('copyRow');
+    const copyBtn   = document.getElementById('copyBtn');
+    const tagCount  = document.getElementById('tagCount');
+    const yearSpan  = document.getElementById('year');
+
+    yearSpan.textContent = new Date().getFullYear();
+
+    btn.addEventListener('click', generateHashtags);
+    copyBtn.addEventListener('click', copyToClipboard);
+
+    let lastHashtags = []; // keep last result for copy
+
+    async function generateHashtags(){
+      const content = input.value.trim();
+      if(!content){
+        out.hidden = true;
+        copyRow.hidden = true;
+        alert('Please enter some content!');
+        return;
+      }
+
+      btn.disabled = true;
+      out.hidden = false;
+      copyRow.hidden = true;
+      out.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span> Generating hashtags…';
+
+      try{
+        const res = await fetch('http://localhost:5000/generate',{
+          method : 'POST',
+          headers: {'Content-Type':'application/json'},
+          body   : JSON.stringify({content})
+        });
+        const data = await res.json();
+
+        if(data.hashtags && data.hashtags.length){
+          lastHashtags = data.hashtags;
+          out.innerHTML = data.hashtags.map(t=>`<span class="tag">${t}</span>`).join('');
+          tagCount.textContent = data.hashtags.length;
+          copyRow.hidden = false;
+        }else{
+          out.textContent = 'No hashtags generated. Try again!';
+        }
+      }catch(err){
+        out.innerHTML = `<span style="color:var(--clr-danger)">Error: ${err.message}</span>`;
+      }finally{
+        btn.disabled = false;
+      }
+    }
+
+    async function copyToClipboard(){
+      if(!lastHashtags.length) return;
+      const text = lastHashtags.map(t=>`#${t}`).join(' ');
+      try{
+        await navigator.clipboard.writeText(text);
+        const original = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Copied!';
+        setTimeout(()=> copyBtn.innerHTML = original, 1500);
+      }catch(err){
+        alert('Could not copy to clipboard');
+      }
+    }
+  </script>
+</body>
+</html>
