@@ -324,7 +324,7 @@
       out.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span> Generating hashtags…';
 
       try{
-        const res = await fetch('http://localhost:5000/generate',{
+        const res = await fetch('https://content-creator-assistance.onrender.com/generate',{
           method : 'POST',
           headers: {'Content-Type':'application/json'},
           body   : JSON.stringify({content})
@@ -360,4 +360,5 @@
     }
   </script>
 </body>
+
 </html>
