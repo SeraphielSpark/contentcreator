@@ -1,71 +1,60 @@
 import os
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from flask import Flask, request, jsonify
 from dotenv import load_dotenv
-from google import genai  # Latest SDK
+from google import genai
 
-# Load environment variables
+# ------------------------------------------------------------------
+# 0.  ENVIRONMENT
+# ------------------------------------------------------------------
 load_dotenv()
 API_KEY = os.getenv("GOOGLE_API_KEY")
-PORT = int(os.getenv("PORT", 5000))
+PORT = int(os.getenv("PORT", 8000))
 
 if not API_KEY:
-    raise Exception("GOOGLE_API_KEY not set in environment variables!")
+    raise RuntimeError("GOOGLE_API_KEY not set in environment variables!")
 
-# Initialize Google GenAI client
+# ------------------------------------------------------------------
+# 1.  CLIENT
+# ------------------------------------------------------------------
 client = genai.Client(api_key=API_KEY)
 
-# FastAPI app
-app = FastAPI(title="Content Creator Assistance API")
+# ------------------------------------------------------------------
+# 2.  FLASK APP
+# ------------------------------------------------------------------
+app = Flask(__name__)
 
-# Enable CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Request body model
-class ContentRequest(BaseModel):
-    content: str
-
-@app.post("/generate")
-async def generate_hashtags(request: ContentRequest):
-    content = request.content.strip()
+@app.route("/generate", methods=["POST"])
+def generate_hashtags():
+    data = request.get_json(silent=True) or {}
+    content = (data.get("content") or "").strip()
     if not content:
-        raise HTTPException(status_code=400, detail="Content is required")
+        return jsonify(error="Content is required"), 400
 
-    prompt = f"""
-    Extract 10 SEO-friendly hashtags from the following content.
-    Return hashtags only, separated by commas. Content: "{content}"
-    """
+    prompt = (
+        "Extract 10 SEO-friendly hashtags from the following content. "
+        "Return hashtags only, separated by commas.\n\n"
+        f'Content: "{content}"'
+    )
 
     try:
-        # NEW SDK usage: generate_content returns response with .text()
-        response = client.generate_content(
+        response = client.models.generate_content(
             model="gemini-1.5-flash",
-            content=[prompt]  # list of strings
+            contents=prompt,
         )
-
-        # Get generated text
-        generated_text = response.text().strip() if response.text() else ""
-
-        # Split into hashtags
-        hashtags = [
-            tag.strip() for tag in generated_text.replace("\n", "").split(",")
-            if tag.strip().startswith("#")
-        ]
-
-        return {"hashtags": hashtags}
-
+        generated_text = response.text.strip() if response.text else ""
     except Exception as e:
-        print("❌ Gemini API Error:", e)
-        raise HTTPException(status_code=500, detail="Something went wrong")
+        print("Gemini API error:", e)
+        return jsonify(error="Generation failed"), 500
 
+    hashtags = [
+        tag.strip()
+        for tag in generated_text.replace("\n", ",").split(",")
+        if tag.strip().startswith("#")
+    ]
+    return jsonify(hashtags=hashtags)
 
-# Run locally
+# ------------------------------------------------------------------
+# 3.  LOCAL DEV
+# ------------------------------------------------------------------
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=PORT)
+    app.run(host="0.0.0.0", port=PORT, debug=True)
