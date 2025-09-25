@@ -43,18 +43,14 @@ async def generate_hashtags(request: ContentRequest):
     """
 
     try:
-        # Correct usage of generate_content
-        response = client.models.generate_content(
+        # NEW SDK usage: generate_content returns response with .text()
+        response = client.generate_content(
             model="gemini-1.5-flash",
-            contents=[prompt]  # pass a list of strings
+            content=[prompt]  # list of strings
         )
 
-        # Access generated text properly
-        generated_text = ""
-        if response.output and len(response.output) > 0:
-            first_output = response.output[0]
-            if first_output.content and len(first_output.content) > 0:
-                generated_text = first_output.content[0].text.strip()
+        # Get generated text
+        generated_text = response.text().strip() if response.text() else ""
 
         # Split into hashtags
         hashtags = [
