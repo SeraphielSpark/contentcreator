@@ -36,7 +36,7 @@ app.post("/generate", async (req, res) => {
     // Optional: Clean response
     const hashtags = response.output_text
       .replace(/\n/g, '')
-      .split(/,|\s(?=#)/)  // split by commas or spaces before # signs
+      .split(/,|\s(?=#)/)
       .map(tag => tag.trim())
       .filter(tag => tag.startsWith("#"));
 
