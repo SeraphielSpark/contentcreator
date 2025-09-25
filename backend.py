@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -7,7 +7,6 @@ from google.genai import Client
 
 # Load environment variables
 load_dotenv()
-
 API_KEY = os.getenv("GOOGLE_API_KEY")
 PORT = int(os.getenv("PORT", 5000))
 
@@ -17,10 +16,8 @@ if not API_KEY:
 # Initialize Google GenAI client
 client = Client(api_key=API_KEY)
 
-# FastAPI app
 app = FastAPI(title="Content Creator Assistance API")
 
-# CORS (allow all origins; customize if needed)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,11 +25,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Request body model
 class ContentRequest(BaseModel):
     content: str
 
-# Endpoint
 @app.post("/generate")
 async def generate_hashtags(request: ContentRequest):
     content = request.content
@@ -45,17 +40,18 @@ async def generate_hashtags(request: ContentRequest):
     """
 
     try:
-        response = client.generate_text(
+        # Correct method for latest SDK
+        response = client.text.generate(
             model="gemini-1.5",
-            content=prompt
+            temperature=0,
+            max_output_tokens=200,
+            prompt=prompt
         )
 
-        # Extract text
-        generated_text = response.text.strip() if response.text else ""
+        generated_text = response.output[0].content[0].text.strip() if response.output else ""
         if not generated_text:
             return {"hashtags": []}
 
-        # Clean and split hashtags
         hashtags = [
             tag.strip() for tag in generated_text.replace("\n", "").split(",")
             if tag.strip().startswith("#")
@@ -67,7 +63,6 @@ async def generate_hashtags(request: ContentRequest):
         print("❌ Gemini API Error:", e)
         raise HTTPException(status_code=500, detail="Something went wrong")
 
-# Run locally (optional)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=PORT)
