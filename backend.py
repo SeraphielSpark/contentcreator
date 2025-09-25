@@ -44,10 +44,10 @@ async def generate_hashtags(request: ContentRequest):
 
     try:
         # Use chat() instead of generate_text / generate_content
-        response = client.chat(
-            model="gemini-1.5",
-            messages=[{"role": "user", "content": prompt}]
-        )
+      
+        response = client.models.generate_content(
+        model='gemini-1.5-flash', contents='Why is the sky blue?'
+)
 
         # Get the generated text
         generated_text = response.last or ""
@@ -69,3 +69,4 @@ async def generate_hashtags(request: ContentRequest):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=PORT)
+
