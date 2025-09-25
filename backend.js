@@ -27,10 +27,10 @@ app.post("/generate", async (req, res) => {
       Return hashtags only, separated by commas. Content: "${content}"
     `;
 
-    // Generate content using the new GenAI method
-    const response = await genAI.generateText({
-      model: "gemini-1.5", // or "gemini-1.5-flash" if available
-      input: prompt
+    // Generate content using the Google Gen AI SDK
+    const response = await genAI.models.generateContent({
+      model: "gemini-1.5-flash", // or "gemini-1.5-flash" if available
+      contents: prompt,
     });
 
     // Optional: Clean response
@@ -51,3 +51,4 @@ app.post("/generate", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Backend running at http://localhost:${PORT}`);
 });
+
