@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from google.genai import Client  # make sure the import matches latest SDK
+from google import genai  # Latest SDK
 
 # Load environment variables
 load_dotenv()
@@ -14,12 +14,12 @@ if not API_KEY:
     raise Exception("GOOGLE_API_KEY not set in environment variables!")
 
 # Initialize Google GenAI client
-client = Client(api_key=API_KEY)
+client = genai.Client(api_key=API_KEY)
 
 # FastAPI app
 app = FastAPI(title="Content Creator Assistance API")
 
-# CORS setup (allow all origins)
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,7 +33,7 @@ class ContentRequest(BaseModel):
 
 @app.post("/generate")
 async def generate_hashtags(request: ContentRequest):
-    content = request.content
+    content = request.content.strip()
     if not content:
         raise HTTPException(status_code=400, detail="Content is required")
 
@@ -43,18 +43,16 @@ async def generate_hashtags(request: ContentRequest):
     """
 
     try:
-        # Use generate_text() method
-        response = client.generate_text(
+        # Use chat() instead of generate_text / generate_content
+        response = client.chat(
             model="gemini-1.5",
-            prompt=prompt,
-            temperature=0.5,
-            max_output_tokens=200
+            messages=[{"role": "user", "content": prompt}]
         )
 
-        # Extract text
-        generated_text = response.output_text.strip() if response.output_text else ""
+        # Get the generated text
+        generated_text = response.last or ""
 
-        # Split hashtags
+        # Split into hashtags
         hashtags = [
             tag.strip() for tag in generated_text.replace("\n", "").split(",")
             if tag.strip().startswith("#")
