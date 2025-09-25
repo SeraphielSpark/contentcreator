@@ -1,5 +1,6 @@
 import os
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from dotenv import load_dotenv
 from google import genai
 
@@ -14,15 +15,19 @@ if not API_KEY:
     raise RuntimeError("GOOGLE_API_KEY not set in environment variables!")
 
 # ------------------------------------------------------------------
-# 1.  CLIENT
+# 1.  GOOGLE GENAI CLIENT
 # ------------------------------------------------------------------
 client = genai.Client(api_key=API_KEY)
 
 # ------------------------------------------------------------------
-# 2.  FLASK APP
+# 2.  FLASK APP  +  CORS
 # ------------------------------------------------------------------
 app = Flask(__name__)
+CORS(app)  # allow all origins (change if you need tighter rules)
 
+# ------------------------------------------------------------------
+# 3.  ROUTE
+# ------------------------------------------------------------------
 @app.route("/generate", methods=["POST"])
 def generate_hashtags():
     data = request.get_json(silent=True) or {}
@@ -54,7 +59,7 @@ def generate_hashtags():
     return jsonify(hashtags=hashtags)
 
 # ------------------------------------------------------------------
-# 3.  LOCAL DEV
+# 4.  LOCAL DEV ENTRY-POINT
 # ------------------------------------------------------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT, debug=True)
