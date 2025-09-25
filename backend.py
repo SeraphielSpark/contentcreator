@@ -43,14 +43,18 @@ async def generate_hashtags(request: ContentRequest):
     """
 
     try:
-        # Use chat() instead of generate_text / generate_content
-      
+        # Correct usage of generate_content
         response = client.models.generate_content(
-        model='gemini-1.5-flash', contents='Why is the sky blue?'
-)
+            model="gemini-1.5-flash",
+            contents=[prompt]  # pass a list of strings
+        )
 
-        # Get the generated text
-        generated_text = response.last or ""
+        # Access generated text properly
+        generated_text = ""
+        if response.output and len(response.output) > 0:
+            first_output = response.output[0]
+            if first_output.content and len(first_output.content) > 0:
+                generated_text = first_output.content[0].text.strip()
 
         # Split into hashtags
         hashtags = [
@@ -69,4 +73,3 @@ async def generate_hashtags(request: ContentRequest):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=PORT)
-
