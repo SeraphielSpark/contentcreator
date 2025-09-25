@@ -16,7 +16,8 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Gemini setup
-const genAI = new GoogleGenAI('AIzaSyC5OqbLCKuL-uncdxxe7x81t8g9ttE3J_c');
+const genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+
 
 // Endpoint
 app.post("/generate", async (req, res) => {
@@ -51,6 +52,7 @@ app.post("/generate", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Backend running at http://localhost:${PORT}`);
 });
+
 
 
 
