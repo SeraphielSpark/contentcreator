@@ -9,14 +9,12 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 
 // Gemini setup
 const genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
 
-// Endpoint
 app.post("/generate", async (req, res) => {
   try {
     const { content } = req.body;
@@ -27,14 +25,17 @@ app.post("/generate", async (req, res) => {
       Return hashtags only, separated by commas. Content: "${content}"
     `;
 
-    // Generate content using the Google Gen AI SDK
+    // Generate content using GenAI Node.js SDK
     const response = await genAI.models.generateContent({
-      model: "gemini-1.5-flash", // or "gemini-1.5-flash" if available
-      contents: prompt,
+      model: "gemini-1.5-flash",
+      contents: [{ type: "text", text: prompt }],
     });
 
-    // Optional: Clean response
-    const hashtags = response.output_text
+    // The generated text is inside response.candidates[0].content
+    const generatedText = response.candidates?.[0]?.content?.[0]?.text;
+    if (!generatedText) return res.status(500).json({ error: "No text generated" });
+
+    const hashtags = generatedText
       .replace(/\n/g, '')
       .split(/,|\s(?=#)/)
       .map(tag => tag.trim())
@@ -47,8 +48,6 @@ app.post("/generate", async (req, res) => {
   }
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`🚀 Backend running at http://localhost:${PORT}`);
 });
-
