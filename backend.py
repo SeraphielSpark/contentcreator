@@ -19,7 +19,7 @@ client = genai.Client(api_key=API_KEY)
 # FastAPI app
 app = FastAPI(title="Content Creator Assistance API")
 
-# CORS setup (allow all origins, customize if needed)
+# CORS setup (allow all origins)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,7 +31,6 @@ app.add_middleware(
 class ContentRequest(BaseModel):
     content: str
 
-# POST endpoint to generate SEO hashtags
 @app.post("/generate")
 async def generate_hashtags(request: ContentRequest):
     content = request.content
@@ -44,18 +43,16 @@ async def generate_hashtags(request: ContentRequest):
     """
 
     try:
-        # Correct usage with latest SDK
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[{"type": "text", "text": prompt}]
+        # NEW: Pass a list of strings instead of dicts
+        response = client.generate_content(
+            model="gemini-1.5-flash",
+            content=[prompt]
         )
 
-        # Extract generated text
-        generated_text = response.output[0].content[0].text.strip() if response.output else ""
-        if not generated_text:
-            return {"hashtags": []}
+        # Extract text
+        generated_text = response.output_text.strip() if response.output_text else ""
 
-        # Clean and split hashtags
+        # Split hashtags
         hashtags = [
             tag.strip() for tag in generated_text.replace("\n", "").split(",")
             if tag.strip().startswith("#")
@@ -66,6 +63,7 @@ async def generate_hashtags(request: ContentRequest):
     except Exception as e:
         print("❌ Gemini API Error:", e)
         raise HTTPException(status_code=500, detail="Something went wrong")
+
 
 # Run locally
 if __name__ == "__main__":
