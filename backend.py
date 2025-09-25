@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from google import genai  # latest SDK
+from google.genai import Client  # make sure the import matches latest SDK
 
 # Load environment variables
 load_dotenv()
@@ -14,7 +14,7 @@ if not API_KEY:
     raise Exception("GOOGLE_API_KEY not set in environment variables!")
 
 # Initialize Google GenAI client
-client = genai.Client(api_key=API_KEY)
+client = Client(api_key=API_KEY)
 
 # FastAPI app
 app = FastAPI(title="Content Creator Assistance API")
@@ -43,10 +43,12 @@ async def generate_hashtags(request: ContentRequest):
     """
 
     try:
-        # NEW: Pass a list of strings instead of dicts
-        response = client.generate_content(
-            model="gemini-1.5-flash",
-            content=[prompt]
+        # Use generate_text() method
+        response = client.generate_text(
+            model="gemini-1.5",
+            prompt=prompt,
+            temperature=0.5,
+            max_output_tokens=200
         )
 
         # Extract text
