@@ -4,6 +4,7 @@ import os
 import cohere
 
 app = Flask(__name__)
+CORS(app, resources={r"/ask": {"origins": ["*", "http://127.0.0.1:5500", "https://127.0.0.1:5500"]}}, supports_credentials=True)
 
 # ✅ Securely load API key from environment
 cohere_api_key = os.environ.get("COHERE_API_KEY")
@@ -63,6 +64,7 @@ def ask():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Render will set this automatically
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
