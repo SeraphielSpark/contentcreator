@@ -3,7 +3,9 @@ from flask_cors import CORS
 import cohere
 
 app = Flask(__name__)
-CORS(app)
+
+# ✅ Allow your frontend domain explicitly (127.0.0.1:5500 and others)
+CORS(app, resources={r"/ask": {"origins": ["*", "http://127.0.0.1:5500", "https://127.0.0.1:5500"]}}, supports_credentials=True)
 
 # Initialize Cohere client
 co = cohere.Client(api_key="QRrRqcMgcV4Ecn5PDTeRM2skjfGvgkoXwM2UaP1T")
@@ -54,5 +56,6 @@ def ask():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))  # Render will set this automatically
+    app.run(host="0.0.0.0", port=port, debug=True)
 
