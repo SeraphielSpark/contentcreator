@@ -6,7 +6,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Initialize Cohere client
-co = cohere.ClientV2(api_key="QRrRqcMgcV4Ecn5PDTeRM2skjfGvgkoXwM2UaP1T")
+co = cohere.Client(api_key="QRrRqcMgcV4Ecn5PDTeRM2skjfGvgkoXwM2UaP1T")
 
 @app.route("/ask", methods=["POST"])
 def ask():
@@ -55,3 +55,4 @@ def ask():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
