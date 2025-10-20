@@ -5,11 +5,15 @@ import cohere
 
 app = Flask(__name__)
 
-# ✅ Allow your frontend domain explicitly (127.0.0.1:5500 and others)
-CORS(app, resources={r"/ask": {"origins": ["*", "http://127.0.0.1:5500", "https://127.0.0.1:5500"]}}, supports_credentials=True)
+# ✅ Securely load API key from environment
+cohere_api_key = os.environ.get("COHERE_API_KEY")
 
-# Initialize Cohere client
-co = cohere.Client(api_key="QRrRqcMgcV4Ecn5PDTeRM2skjfGvgkoXwM2UaP1T")
+if not cohere_api_key:
+    raise ValueError("⚠️ COHERE_API_KEY not found in environment variables!")
+
+# Initialize client (works for both Client and ClientV2)
+co = cohere.Client(api_key=cohere_api_key)
+
 
 @app.route("/ask", methods=["POST"])
 def ask():
@@ -59,5 +63,6 @@ def ask():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Render will set this automatically
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
