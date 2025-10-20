@@ -3,19 +3,22 @@ from flask_cors import CORS
 import os
 import cohere
 
+# --- Flask Setup ---
 app = Flask(__name__)
-CORS(app, resources={r"/ask": {"origins": ["*", "http://127.0.0.1:5500", "https://127.0.0.1:5500"]}}, supports_credentials=True)
 
-# ✅ Securely load API key from environment
+# Allow all origins for public API
+CORS(app, resources={r"/ask": {"origins": "*"}})
+
+# --- Securely Load API Key ---
 cohere_api_key = os.environ.get("COHERE_API_KEY")
 
 if not cohere_api_key:
     raise ValueError("⚠️ COHERE_API_KEY not found in environment variables!")
 
-# Initialize client (works for both Client and ClientV2)
+# Initialize Cohere client (Render supports latest Cohere SDK)
 co = cohere.Client(api_key=cohere_api_key)
 
-
+# --- Routes ---
 @app.route("/ask", methods=["POST"])
 def ask():
     try:
@@ -25,7 +28,7 @@ def ask():
         if not user_input:
             return jsonify({"error": "No question provided"}), 400
 
-        # Build prompt
+        # Prompt for Cohere
         prompt = f"""
         Generate 15–20 SEO-optimized hashtags relevant to the following content.
         Each hashtag must start with # and avoid generic tags like #love or #life.
@@ -37,34 +40,24 @@ def ask():
         Hashtags:
         """
 
-        # Cohere chat call
-        response = co.chat(
-            model="command-a-03-2025",
-            temperature=0.3,
-            messages=[{"role": "user", "content": [{"type": "text", "text": prompt}]}],
+        # --- Use Cohere’s Generate Endpoint (more stable for Render) ---
+        response = co.generate(
+            model="command-xlarge-nightly",
+            prompt=prompt,
+            temperature=0.4,
+            max_tokens=150
         )
 
-        # ✅ Extract assistant text correctly
-        assistant_message = response.message
-        hashtags_text = ""
+        hashtags_text = response.generations[0].text.strip()
 
-        # Combine all text content items from assistant message
-        for item in assistant_message.content:
-            if item.type == "text":
-                hashtags_text += item.text + "\n"
-
-        # Return as JSON
-        return jsonify({"generations": [{"text": hashtags_text.strip()}]})
+        return jsonify({"generations": [{"text": hashtags_text}]})
 
     except Exception as e:
         print("Error:", e)
         return jsonify({"error": str(e)}), 500
 
 
+# --- Entry Point for Render ---
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Render will set this automatically
-    app.run(host="0.0.0.0", port=port, debug=True)
-
-
-
-
+    port = int(os.environ.get("PORT", 5000))  # Render auto-assigns this
+    app.run(host="0.0.0.0", port=port)
