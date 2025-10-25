@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import google.generativeai as genai
+# [NEW] Import safety setting types
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 # --- Flask Setup ---
 app = Flask(__name__)
@@ -15,10 +17,19 @@ gemini_api_key = os.environ.get("GEMINI_API_KEY")
 if not gemini_api_key:
     raise ValueError("⚠️ GEMINI_API_KEY not found in environment variables!")
 
+# --- [NEW] Define Safety Settings ---
+# We are setting all filters to BLOCK_NONE, as they are being too strict.
+safety_settings = {
+    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+}
+
 # --- Initialize Gemini Client ---
 try:
     genai.configure(api_key=gemini_api_key)
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    model = genai.GenerativeModel('gemini-1.5-flash-latest')
     generation_config = genai.types.GenerationConfig(
         temperature=0.4,
         max_output_tokens=150
@@ -53,10 +64,11 @@ def ask():
         # --- Use Gemini's Generate Content Endpoint ---
         response = model.generate_content(
             prompt,
-            generation_config=generation_config
+            generation_config=generation_config,
+            safety_settings=safety_settings  # <-- [NEW] Applying the safety settings
         )
 
-        # --- [FIX] Safely access the response text ---
+        # --- Safely access the response text ---
         try:
             # The 'response.text' accessor will raise a ValueError if content is blocked.
             # We can catch this specific error.
@@ -85,5 +97,4 @@ def ask():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Render auto-assigns this
     app.run(host="0.0.0.0", port=port)
-
 
