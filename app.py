@@ -18,7 +18,7 @@ if not gemini_api_key:
 # --- Initialize Gemini Client ---
 try:
     genai.configure(api_key=gemini_api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
     generation_config = genai.types.GenerationConfig(
         temperature=0.4,
         max_output_tokens=150
@@ -85,4 +85,5 @@ def ask():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Render auto-assigns this
     app.run(host="0.0.0.0", port=port)
+
 
