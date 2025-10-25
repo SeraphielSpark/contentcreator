@@ -1,12 +1,12 @@
 from flask import Flask, request, jsonify
-from google import genai
+import google.genai as genai
 import os
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
 
-# Initialize Gemini client using environment variable from Render
+# Initialize Gemini client using environment variable
 API_KEY = os.environ.get("GOOGLE_API_KEY")
 client = genai.Client(api_key=API_KEY)
 
