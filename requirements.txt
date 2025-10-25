@@ -2,4 +2,3 @@ Flask==3.0.3
 Flask-Cors==4.0.1
 gunicorn==23.0.0
 google-generativeai
-os
