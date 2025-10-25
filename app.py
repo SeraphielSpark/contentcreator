@@ -166,7 +166,7 @@ def respond():
         return jsonify({"error": "Request must be JSON"}), 400
 
     prompt_content = data.get("prompt", "")
-    print(f"[DEBUG] /respond: Received prompt: {prompt_content[:100]}...")
+    print(f"[DEBUG] /respond: Received prompt: {prompt_content[:2000]}...")
 
     if not prompt_content:
         print("[ERROR] /respond: No 'prompt' content in JSON")
@@ -183,7 +183,7 @@ def respond():
     try:
         # --- ✅ Correct Google GenAI SDK Call ---
         print("[DEBUG] /respond: Calling Google GenAI...")
-        client = genai.Client(api_key='AIzaSyAEGRhQSYTSCaTlm0_Ep-37OQAUd_-4R4M')
+        client = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=chat_prompt
@@ -322,4 +322,5 @@ if __name__ == "__main__":
     print(f"Starting Flask app on host 0.0.0.0, port {port} with debug mode...")
     # Use debug=True for development to see errors and auto-reload
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
