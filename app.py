@@ -40,7 +40,7 @@ app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=3)
 # IMPORTANT: Set the GOOGLE_API_KEY environment variable in your terminal
 # export GOOGLE_API_KEY='your_actual_api_key_here'
 try:
-    GOOGLE_API_KEY = 'AIzaSyAEGRhQSYTSCaTlm0_Ep-37OQAUd_-4R4M'#os.environ.get("GOOGLE_API_KEY")
+    GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
     if not GOOGLE_API_KEY:
         print("[FATAL ERROR] GOOGLE_API_KEY environment variable not set. API calls will fail.")
     genai.configure(api_key=GOOGLE_API_KEY)
@@ -322,3 +322,4 @@ if __name__ == "__main__":
     print(f"Starting Flask app on host 0.0.0.0, port {port} with debug mode...")
     # Use debug=True for development to see errors and auto-reload
     app.run(host="0.0.0.0", port=port, debug=True)
+
