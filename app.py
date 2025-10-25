@@ -1,100 +1,57 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
+from google import genai
 import os
-import google.generativeai as genai
-# [NEW] Import safety setting types
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
+from flask_cors import CORS
 
-# --- Flask Setup ---
 app = Flask(__name__)
+CORS(app)
 
-# Allow all origins for public API
-CORS(app, resources={r"/ask": {"origins": "*"}})
+# Initialize Gemini client using environment variable from Render
+API_KEY = os.environ.get("GOOGLE_API_KEY")
+client = genai.Client(api_key=API_KEY)
 
-# --- Securely Load API Key ---
-gemini_api_key = os.environ.get("GEMINI_API_KEY")
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"message": "Hashtag Generator API is live!"})
 
-if not gemini_api_key:
-    raise ValueError("⚠️ GEMINI_API_KEY not found in environment variables!")
+@app.route("/generate", methods=["POST"])
+def generate():
+    data = request.get_json()
+    post_content = data.get("post", "")
 
-# --- [NEW] Define Safety Settings ---
-# We are setting all filters to BLOCK_NONE, as they are being too strict.
-safety_settings = {
-    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-}
+    if not post_content:
+        return jsonify({"error": "No post content provided"}), 400
 
-# --- Initialize Gemini Client ---
-try:
-    genai.configure(api_key=gemini_api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash-latest')
-    generation_config = genai.types.GenerationConfig(
-        temperature=0.4,
-        max_output_tokens=150
-    )
-except Exception as e:
-    # This will catch initialization errors if the API key is bad
-    print(f"Error initializing Gemini: {e}")
-    raise e
+    prompt = f"""
+    You are an expert social media strategist.
+    The user provided this post caption:
+    "{post_content}"
 
-# --- Routes ---
-@app.route("/ask", methods=["POST"])
-def ask():
+    Your task:
+    1. Keep the user's content EXACTLY as it is.
+    2. Add a new line below and generate ONLY 7 to 10 trending, aesthetic, SEO-optimized hashtags.
+    3. Make sure the hashtags are relevant to the post.
+    4. Return the entire output as one full text block — the original post + hashtags below.
+    5. Do NOT include explanations or numbering.
+
+    Format output as:
+
+    [Original post caption]
+
+    [7–10 hashtags]
+    """
+
     try:
-        data = request.get_json()
-        user_input = data.get("question", "").strip()
-
-        if not user_input:
-            return jsonify({"error": "No question provided"}), 400
-
-        # Prompt for Gemini
-        prompt = f"""
-        Generate 15–20 SEO-optimized hashtags relevant to the following content.
-        Each hashtag must start with # and avoid generic tags like #love or #life.
-        Separate each hashtag with a space.
-
-        Content:
-        "{user_input}"
-
-        Hashtags:
-        """
-
-        # --- Use Gemini's Generate Content Endpoint ---
-        response = model.generate_content(
-            prompt,
-            generation_config=generation_config,
-            safety_settings=safety_settings  # <-- [NEW] Applying the safety settings
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
         )
-
-        # --- Safely access the response text ---
-        try:
-            # The 'response.text' accessor will raise a ValueError if content is blocked.
-            # We can catch this specific error.
-            hashtags_text = response.text.strip()
-        except ValueError:
-            # This happens if the response was blocked by safety filters
-            print("Content generation failed, likely due to safety filters.")
-            print("Prompt Feedback:", response.prompt_feedback)
-            return jsonify({"error": "Content generation failed. The prompt or response was blocked by safety filters."}), 500
-        except Exception as e:
-            # Catch other potential issues with the response object
-            print(f"Error accessing response text: {e}")
-            return jsonify({"error": f"Error processing model response: {e}"}), 500
-
-
-        # --- Return in the *exact same* format as the original Cohere API ---
-        return jsonify({"generations": [{"text": hashtags_text}]})
-
+        result = response.text.strip()
+        return jsonify({"result": result})
     except Exception as e:
-        # This outer block catches errors in request parsing or the model.generate_content() call itself
-        print(f"Error during /ask route: {e}")
         return jsonify({"error": str(e)}), 500
 
 
-# --- Entry Point for Render ---
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Render auto-assigns this
+    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
-
