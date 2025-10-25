@@ -18,7 +18,7 @@ if not gemini_api_key:
 # --- Initialize Gemini Client ---
 try:
     genai.configure(api_key=gemini_api_key)
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    model = genai.GenerativeModel('gemini-1.5-flash')
     generation_config = genai.types.GenerationConfig(
         temperature=0.4,
         max_output_tokens=150
@@ -56,23 +56,28 @@ def ask():
             generation_config=generation_config
         )
 
-        hashtags_text = response.text.strip()
+        # --- [FIX] Safely access the response text ---
+        try:
+            # The 'response.text' accessor will raise a ValueError if content is blocked.
+            # We can catch this specific error.
+            hashtags_text = response.text.strip()
+        except ValueError:
+            # This happens if the response was blocked by safety filters
+            print("Content generation failed, likely due to safety filters.")
+            print("Prompt Feedback:", response.prompt_feedback)
+            return jsonify({"error": "Content generation failed. The prompt or response was blocked by safety filters."}), 500
+        except Exception as e:
+            # Catch other potential issues with the response object
+            print(f"Error accessing response text: {e}")
+            return jsonify({"error": f"Error processing model response: {e}"}), 500
+
 
         # --- Return in the *exact same* format as the original Cohere API ---
         return jsonify({"generations": [{"text": hashtags_text}]})
 
     except Exception as e:
-        print(f"Error during content generation: {e}")
-        
-        # Check if the error is due to safety filters
-        try:
-            if response.prompt_feedback:
-                print("Prompt Feedback:", response.prompt_feedback)
-                return jsonify({"error": "Content generation failed. The prompt may have been blocked by safety filters."}), 500
-        except Exception:
-            pass # response object might not exist if 'model.generate_content' failed
-
-        # General server error
+        # This outer block catches errors in request parsing or the model.generate_content() call itself
+        print(f"Error during /ask route: {e}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -80,5 +85,4 @@ def ask():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Render auto-assigns this
     app.run(host="0.0.0.0", port=port)
-
 
