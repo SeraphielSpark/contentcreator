@@ -6,5 +6,5 @@ Flask-JWT-Extended
 PyJWT
 requests
 Pillow
-google-generativeai
+google-genai
 gunicorn
