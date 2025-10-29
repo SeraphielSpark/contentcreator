@@ -60,7 +60,7 @@ print(f"[INFO] Generated folder: {app.config['GENERATED_FOLDER']}")
 # ------------------------
 # ✅ [MERGED] Google API Configuration
 # ------------------------
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
+GOOGLE_API_KEY = 'AIzaSyAEGRhQSYTSCaTlm0_Ep-37OQAUd_-4R4M'#os.environ.get("GOOGLE_API_KEY")
 if not GOOGLE_API_KEY:
     print("[FATAL ERROR] GOOGLE_API_KEY is not set. Please add it in Render Environment Variables.")
 
@@ -554,4 +554,3 @@ if __name__ == "__main__":
     # Note: app.run() is fine for Render's environment, but gunicorn is preferred.
     # Since your working example uses this, we will keep it.
     app.run(host="0.0.0.0", port=port)
-
