@@ -1,3 +1,4 @@
+import google.genai as genai  # <-- Real import
 import os
 import io
 import time
@@ -15,7 +16,6 @@ from flask_jwt_extended.exceptions import NoAuthorizationError
 from jwt import ExpiredSignatureError
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
-import google.genai as genai
 
 # ======================================================
 # ⚙️ CORE APP, DB, & AUTH SETUP
