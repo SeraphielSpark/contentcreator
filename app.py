@@ -73,7 +73,7 @@ except Exception as e:
     client = None
 
 # --- 2. REST API URL for Image Generation (from your original app) ---
-MODEL_NAME = "gemini-2.5-flash-image-preview"
+MODEL_NAME = "gemini-2.5-flash-image"
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={GOOGLE_API_KEY}"
 print(f"[INFO] Image API (REST) endpoint set for model: {MODEL_NAME}")
 
@@ -554,3 +554,4 @@ if __name__ == "__main__":
     # Note: app.run() is fine for Render's environment, but gunicorn is preferred.
     # Since your working example uses this, we will keep it.
     app.run(host="0.0.0.0", port=port)
+
