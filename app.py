@@ -1,4 +1,3 @@
-import google.genai as genai  # <-- Real import
 import os
 import io
 import time
@@ -7,37 +6,46 @@ import base64
 import requests
 from PIL import Image
 from flask import Flask, request, jsonify, send_from_directory
+from google import genai  # ✅ Correct import for Google GenAI SDK (from your working example)
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
-from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager
-from flask_jwt_extended import verify_jwt_in_request
+from flask_jwt_extended import (
+    create_access_token,
+    get_jwt_identity,
+    jwt_required,
+    JWTManager,
+    verify_jwt_in_request
+)
 from flask_jwt_extended.exceptions import NoAuthorizationError
 from jwt import ExpiredSignatureError
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 
-# ======================================================
-# ⚙️ CORE APP, DB, & AUTH SETUP
-# ======================================================
+# ------------------------
+# ✅ Helper for optional JWT
+# ------------------------
+def get_jwt_identity_optional():
+    try:
+        verify_jwt_in_request(optional=True)
+        return get_jwt_identity()
+    except (NoAuthorizationError, ExpiredSignatureError):
+        return None
 
+# ------------------------
+# ✅ Flask App Setup
+# ------------------------
 app = Flask(__name__)
-
-# --- CORS Configuration ---
-# Allow all origins for now. 
-# For production, restrict this to your frontend's URL:
-# CORS(app, origins=["http://your-frontend-domain.com"], supports_credentials=True)
 CORS(app)
 
 # --- App Configuration ---
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "a_very_strong_fallback_secret_key_123")
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "fallback_secret_key_123")
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///site.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "a_super_secret_jwt_key_456")
+app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "fallback_jwt_secret_456")
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=3)
 
-# --- Folder Configuration (from Image App) ---
-# WARNING: These are EPHEMERAL on Render. Use cloud storage or Render Disks for production.
+# --- [MERGED] Folder Configuration (from Image App) ---
 UPLOAD_FOLDER = 'uploads'
 GENERATED_FOLDER = 'generated'
 app.config['UPLOAD_FOLDER'] = os.path.abspath(UPLOAD_FOLDER)
@@ -49,41 +57,37 @@ os.makedirs(app.config['GENERATED_FOLDER'], exist_ok=True)
 print(f"[INFO] Upload folder: {app.config['UPLOAD_FOLDER']}")
 print(f"[INFO] Generated folder: {app.config['GENERATED_FOLDER']}")
 
-# --- Initialize Extensions ---
+# ------------------------
+# ✅ [MERGED] Google API Configuration
+# ------------------------
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
+if not GOOGLE_API_KEY:
+    print("[FATAL ERROR] GOOGLE_API_KEY is not set. Please add it in Render Environment Variables.")
+
+# --- 1. Client for Text Generation (from your working app) ---
+try:
+    client = genai.Client(api_key=GOOGLE_API_KEY)
+    print("[INFO] Google GenAI SDK (for Text) initialized.")
+except Exception as e:
+    print(f"[ERROR] Failed to initialize Google GenAI client: {e}")
+    client = None
+
+# --- 2. REST API URL for Image Generation (from your original app) ---
+MODEL_NAME = "gemini-2.5-flash-image-preview"
+API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={GOOGLE_API_KEY}"
+print(f"[INFO] Image API (REST) endpoint set for model: {MODEL_NAME}")
+
+
+# ------------------------
+# ✅ Database Setup
+# ------------------------
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 
-
-# ======================================================
-# 🔑 UNIFIED GOOGLE API CONFIGURATION
-# ======================================================
-
-# --- Central API Key ---
-# IMPORTANT: This is hardcoded. For production, set this as an
-# environment variable on Render (GOOGLE_API_KEY) and use:
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-
-if not GOOGLE_API_KEY:
-    print("[FATAL ERROR] GOOGLE_API_KEY environment variable not set. API calls will fail.")
-
-# --- 1. GenAI SDK (for Text Generation) ---
-try:
-    genai.configure(api_key=GOOGLE_API_KEY)
-    print("[INFO] Google GenAI SDK (for Text) configured.")
-except Exception as e:
-    print(f"[ERROR] Failed to configure Google GenAI SDK: {e}")
-
-# --- 2. Image API Endpoint (for Image Generation) ---
-# This uses the v1beta REST API, which is different from the SDK
-MODEL_NAME = "gemini-2.5-flash-image-preview"
-API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={GOOGLE_API_KEY}"
-print(f"[INFO] Google Image API (for Images) endpoint set for model: {MODEL_NAME}")
-
-
-# ======================================================
-# 🎨 STYLE PRESETS (from Image App)
-# ======================================================
+# ------------------------
+# ✅ [MERGED] Style Prompts (from your original app)
+# ------------------------
 STYLE_PROMPTS = {
     # The "Restore" prompt, now heavily detailed and restrictive
     "restore": {
@@ -205,10 +209,10 @@ STYLE_PROMPTS = {
     }
 }
 
-# ======================================================
-# 🗃️ DATABASE MODELS (from Auth App)
-# ======================================================
 
+# ------------------------
+# ✅ Database Models
+# ------------------------
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -218,9 +222,10 @@ class User(db.Model):
     def __repr__(self):
         return f"User('{self.email}')"
 
+
 class SearchHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False) # Title for the sidebar
+    title = db.Column(db.String(100), nullable=False)
     prompt_content = db.Column(db.Text, nullable=False)
     generated_result = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
@@ -238,10 +243,10 @@ class SearchHistory(db.Model):
             'timestamp': self.timestamp.isoformat()
         }
 
-# ======================================================
-# 🔐 JWT & AUTH ROUTES (from Auth App)
-# ======================================================
 
+# ------------------------
+# ✅ JWT Config
+# ------------------------
 @jwt.user_identity_loader
 def user_identity_lookup(user):
     return user.id
@@ -251,57 +256,163 @@ def user_lookup_callback(_jwt_header, jwt_data):
     identity = jwt_data["sub"]
     return User.query.get(identity)
 
+
+# ------------------------
+# ✅ Home Route
+# ------------------------
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({"message": "✅ CreatorsAI API (Merged Image & Text) is live!"})
 
+
+# ------------------------
+# ✅ Hashtag Generator Route
+# ------------------------
+@app.route("/generate", methods=["POST"])
+def generate():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request must be JSON"}), 400
+
+    post_content = data.get("post", "")
+    if not post_content:
+        return jsonify({"error": "No post content provided"}), 400
+
+    prompt = f"""
+    You are an expert social media strategist.
+    The user provided this post caption: "{post_content}"
+    Your task:
+    1. Keep the user's caption exactly as it is.
+    2. Add a new line and generate ONLY 7–10 trending, SEO-optimized hashtags.
+    3. Make hashtags aesthetic and relevant.
+    Format:
+    [Original caption]
+
+    [Hashtags]
+    """
+
+    try:
+        if not client:
+             return jsonify({"error": "Google AI client not initialized. Check API Key."}), 500
+        
+        response = client.models.generate_content(
+            model="gemini-2.0-flash", # Using model from your working example
+            contents=prompt
+        )
+        result = response.text.strip() if hasattr(response, "text") else "No response text received."
+        return jsonify({"result": result})
+    except Exception as e:
+        print(f"[ERROR] /generate: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ------------------------
+# ✅ Chat Response Route
+# ------------------------
+@app.route("/respond", methods=["POST"])
+def respond():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request must be JSON"}), 400
+
+    prompt_content = data.get("prompt", "")
+    if not prompt_content:
+        return jsonify({"error": "No prompt content provided"}), 400
+
+    chat_prompt = f"""
+    You are CreatorsAI — a friendly, insightful assistant for the creator economy.
+    A user asked:
+    "{prompt_content}"
+
+    Give a concise, practical answer tailored for content creators.
+    """
+
+    try:
+        if not client:
+             return jsonify({"error": "Google AI client not initialized. Check API Key."}), 500
+        
+        response = client.models.generate_content(
+            model="gemini-2.0-flash", # Using model from your working example
+            contents=chat_prompt
+        )
+        result = response.text.strip() if hasattr(response, "text") else "No response text received."
+        return jsonify({"result": result})
+    except Exception as e:
+        print(f"[ERROR] /respond: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ------------------------
+# ✅ Auth Routes
+# ------------------------
 @app.route("/auth/register", methods=["POST"])
 def register():
-    print("\n--- Request received at /auth/register ---")
     data = request.get_json()
-    if not data: return jsonify({"error": "Request must be JSON"}), 400
+    if not data:
+        return jsonify({"error": "Request must be JSON"}), 400
     email = data.get("email")
     password = data.get("password")
-    print(f"[DEBUG] /register: Attempting registration for email: {email}")
-    if not email or not password: return jsonify({"error": "Email and password are required"}), 400
-    user_exists = User.query.filter_by(email=email).first()
-    if user_exists:
-        print(f"[WARN] /register: Email already exists: {email}")
+    if not email or not password:
+        return jsonify({"error": "Email and password required"}), 400
+
+    if User.query.filter_by(email=email).first():
         return jsonify({"error": "Email already exists"}), 409
-    try:
-        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-        user = User(email=email, password_hash=hashed_password)
-        db.session.add(user)
-        db.session.commit()
-        print(f"[INFO] /register: User created successfully: {email}")
-        return jsonify({"message": "User created successfully"}), 201
-    except Exception as e:
-        db.session.rollback()
-        print(f"[ERROR] /register: Database error: {str(e)}")
-        return jsonify({"error": f"Database error: {str(e)}"}), 500
+
+    hashed = bcrypt.generate_password_hash(password).decode('utf-8')
+    user = User(email=email, password_hash=hashed)
+    db.session.add(user)
+    db.session.commit()
+    return jsonify({"message": "User created successfully"}), 201
+
 
 @app.route("/auth/login", methods=["POST"])
 def login():
-    print("\n--- Request received at /auth/login ---")
     data = request.get_json()
-    if not data: return jsonify({"error": "Request must be JSON"}), 400
+    if not data:
+        return jsonify({"error": "Request must be JSON"}), 400
     email = data.get("email")
     password = data.get("password")
-    print(f"[DEBUG] /login: Attempting login for email: {email}")
-    if not email or not password: return jsonify({"error": "Email and password are required"}), 400
+
     user = User.query.filter_by(email=email).first()
-    if user and bcrypt.check_password_hash(user.password_hash, password):
-        access_token = create_access_token(identity=user)
-        print(f"[INFO] /login: Login successful for: {email}")
-        return jsonify(access_token=access_token), 200
-    else:
-        print(f"[WARN] /login: Invalid credentials for: {email}")
+    if not user or not bcrypt.check_password_hash(user.password_hash, password):
         return jsonify({"error": "Invalid credentials"}), 401
 
+    token = create_access_token(identity=user)
+    return jsonify(access_token=token), 200
 
-# ======================================================
-# 🖼️ IMAGE GENERATION ROUTES (from Image App)
-# ======================================================
+
+# ------------------------
+# ✅ User History Routes
+# ------------------------
+@app.route("/api/history", methods=["POST"])
+@jwt_required()
+def save_history():
+    user_id = get_jwt_identity()
+    data = request.get_json()
+    prompt = data.get("prompt")
+    result = data.get("result")
+
+    if not prompt or not result:
+        return jsonify({"error": "Prompt and result required"}), 400
+
+    title = (prompt[:40] + "...") if len(prompt) > 40 else prompt
+    new_item = SearchHistory(title=title, prompt_content=prompt, generated_result=result, user_id=user_id)
+    db.session.add(new_item)
+    db.session.commit()
+    return jsonify({"message": "History saved", "history_id": new_item.id}), 201
+
+
+@app.route("/api/history", methods=["GET"])
+@jwt_required()
+def get_history():
+    user_id = get_jwt_identity()
+    items = SearchHistory.query.filter_by(user_id=user_id).order_by(SearchHistory.timestamp.desc()).all()
+    return jsonify([item.to_dict() for item in items]), 200
+
+
+# ---------------------------------------------
+# ✅ [NEW/MERGED] IMAGE GENERATION ROUTES
+# ---------------------------------------------
 
 @app.route('/upload-reference', methods=['POST'])
 def upload_reference():
@@ -370,15 +481,15 @@ def generate_image():
         }
 
         headers = {"Content-Type": "application/json"}
+        # Using the API_URL defined at the top, which uses requests, not the SDK
         response = requests.post(API_URL, headers=headers, json=payload, timeout=180)
 
         if response.status_code != 200:
             print(f"[ERROR] Gemini API Error: {response.text}")
-            return jsonify({"error": f"Gemini API returned {response.status_code}"}), response.status_code
+            return jsonify({"error": f"Gemini API returned {response.status_code}", "details": response.text}), response.status_code
 
         result = response.json()
         
-        # Handle potential "promptFeedback" block indicating a safety/block issue
         if "promptFeedback" in result:
              print(f"[WARN] Gemini returned promptFeedback: {result['promptFeedback']}")
              block_reason = result.get("promptFeedback", {}).get("blockReason", "Unknown")
@@ -420,7 +531,7 @@ def generate_image():
         return jsonify({"error": str(e)}), 500
 
 # ------------------------------------------------------
-# 🗂 Serve Uploaded and Generated Files
+# 🗂 [NEW/MERGED] Serve Uploaded and Generated Files
 # ------------------------------------------------------
 @app.route('/uploads/<path:filename>')
 def serve_upload(filename):
@@ -431,174 +542,15 @@ def serve_generated(filename):
     return send_from_directory(app.config['GENERATED_FOLDER'], filename)
 
 
-# ======================================================
-# 💬 TEXT GENERATION ROUTES (from Auth App)
-# ======================================================
-
-@app.route("/generate", methods=["POST"])
-def generate():
-    print("\n--- Request received at /generate ---")
-    data = request.get_json()
-    if not data:
-        print("[ERROR] /generate: No JSON data received")
-        return jsonify({"error": "Request must be JSON"}), 400
-
-    post_content = data.get("post", "")
-    print(f"[DEBUG] /generate: Received post content: {post_content[:100]}...")
-
-    if not post_content:
-        print("[ERROR] /generate: No 'post' content in JSON")
-        return jsonify({"error": "No post content provided"}), 400
-
-    prompt = f"""
-    You are an expert social media strategist.
-    The user provided this post caption: "{post_content}"
-    Your task:
-    1. Keep the user's content EXACTLY as it is.
-    2. Add a new line below and generate ONLY 7 to 10 trending, aesthetic, SEO-optimized hashtags.
-    3. Make sure the hashtags are relevant to the post.
-    4. Return the entire output as one full text block — the original post + hashtags below.
-    5. Do NOT include explanations or numbering.
-    Format output as:
-    [Original post caption]
-
-    [7–10 hashtags]
-    """
-    try:
-        print("[DEBUG] /generate: Calling Google GenAI SDK...")
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
-        response = model.generate_content(prompt)
-        result = response.text.strip()
-
-        print(f"[DEBUG] /generate: Responding with result: {result[:100]}...")
-        return jsonify({"result": result})
-
-    except Exception as e:
-        print(f"[ERROR] /generate: Exception occurred: {str(e)}")
-        if "API_KEY" in str(e) or "PERMISSION_DENIED" in str(e):
-            print("[ERROR] /generate: Google API Key error.")
-            return jsonify({"error": "Invalid or missing Google API Key. Check server logs."}), 500
-        return jsonify({"error": f"An internal error occurred: {str(e)}"}), 500
-
-
-@app.route("/respond", methods=["POST"])
-def respond():
-    print("\n--- Request received at /respond ---")
-    data = request.get_json()
-    if not data:
-        print("[ERROR] /respond: No JSON data received")
-        return jsonify({"error": "Request must be JSON"}), 400
-
-    prompt_content = data.get("prompt", "")
-    print(f"[DEBUG] /respond: Received prompt: {prompt_content[:100]}...")
-
-    if not prompt_content:
-        print("[ERROR] /respond: No 'prompt' content in JSON")
-        return jsonify({"error": "No prompt content provided"}), 400
-
-    chat_prompt = f"""
-    You are CreatorsAI, a helpful and intelligent assistant for the creator economy.
-    A user has asked:
-    "{prompt_content}"
-
-    Provide a helpful, concise, and relevant response tailored to content creators.
-    """
-
-    try:
-        # Note: Your original code used a different SDK call. 
-        # This is the standard v1.5 call, matching the /generate route.
-        print("[DEBUG] /respond: Calling Google GenAI SDK...")
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
-        response = model.generate_content(chat_prompt)
-        result = response.text.strip()
-        
-        print(f"[DEBUG] /respond: GenAI response received: {result[:100]}...")
-        return jsonify({"result": result})
-
-    except Exception as e:
-        print(f"[ERROR] /respond: Exception occurred: {str(e)}")
-        if "API_KEY" in str(e) or "PERMISSION_DENIED" in str(e):
-            print("[ERROR] /respond: Google API Key error.")
-            return jsonify({"error": "Invalid or missing Google API Key. Check server logs."}), 500
-        return jsonify({"error": f"An internal error occurred: {str(e)}"}), 500
-
-# ======================================================
-# 📚 HISTORY ROUTES (from Auth App)
-# ======================================================
-
-@app.route("/api/history", methods=["POST"])
-@jwt_required()
-def save_history():
-    print("\n--- Request received at POST /api/history ---")
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
-    if not user: return jsonify({"error": "User not found"}), 404
-    print(f"[DEBUG] POST /history: User: {user.email}")
-    data = request.get_json()
-    if not data: return jsonify({"error": "Request must be JSON"}), 400
-    prompt = data.get("prompt")
-    result = data.get("result")
-    if not prompt or not result: return jsonify({"error": "Prompt and result are required"}), 400
-    title = (prompt[:40] + '...') if len(prompt) > 40 else prompt
-    try:
-        search = SearchHistory(title=title, prompt_content=prompt, generated_result=result, author=user)
-        db.session.add(search)
-        db.session.commit()
-        print(f"[INFO] POST /history: History saved for user {user.email}")
-        return jsonify({"message": "History saved", "history_id": search.id}), 201
-    except Exception as e:
-        db.session.rollback()
-        print(f"[ERROR] POST /history: Database error: {str(e)}")
-        return jsonify({"error": f"Database error: {str(e)}"}), 500
-
-@app.route("/api/history", methods=["GET"])
-@jwt_required()
-def get_history():
-    print("\n--- Request received at GET /api/history ---")
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
-    if not user: return jsonify({"error": "User not found"}), 404
-    print(f"[DEBUG] GET /history: Fetching history for user: {user.email}")
-    try:
-        searches = SearchHistory.query.filter_by(user_id=user.id).order_by(SearchHistory.timestamp.desc()).all()
-        print(f"[DEBUG] GET /history: Found {len(searches)} history items.")
-        return jsonify([search.to_dict() for search in searches]), 200
-    except Exception as e:
-        print(f"[ERROR] GET /history: Database error: {str(e)}")
-        return jsonify({"error": f"Database error: {str(e)}"}), 500
-
-@app.route("/api/history/<int:history_id>", methods=["GET"])
-@jwt_required()
-def get_single_history_item(history_id):
-    print(f"\n--- Request received at GET /api/history/{history_id} ---")
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
-    if not user: return jsonify({"error": "User not found"}), 404
-    print(f"[DEBUG] GET /history/{history_id}: User: {user.email}")
-    try:
-        search = SearchHistory.query.filter_by(id=history_id, user_id=current_user_id).first()
-        if not search:
-            print(f"[WARN] GET /history/{history_id}: History item not found or not authorized for user {user.email}")
-            return jsonify({"error": "History not found or not authorized"}), 404
-        print(f"[DEBUG] GET /history/{history_id}: Found history item.")
-        return jsonify(search.to_dict()), 200
-    except Exception as e:
-        print(f"[ERROR] GET /history/{history_id}: Database error: {str(e)}")
-        return jsonify({"error": f"Database error: {str(e)}"}), 500
-
-# ======================================================
-# ▶️ RUN SERVER
-# ======================================================
+# ------------------------
+# ✅ Server Runner for Render
+# ------------------------
 if __name__ == "__main__":
     with app.app_context():
-        print("Creating database tables if they don't exist...")
-        try:
-            db.create_all()
-            print("Database tables checked/created.")
-        except Exception as e:
-            print(f"Error creating database tables: {e}")
-
-    # Port for Render (uses $PORT) or defaults to 5000 for local
+        print("Checking/creating database tables...")
+        db.create_all()
+        print("Database ready.")
     port = int(os.environ.get("PORT", 5000))
-    print(f"🚀 Starting Flask app on host 0.0.0.0, port {port}")
-    app.run(host="0.0.0.0", port=port, debug=False) # Debug=False is better for production
+    # Note: app.run() is fine for Render's environment, but gunicorn is preferred.
+    # Since your working example uses this, we will keep it.
+    app.run(host="0.0.0.0", port=port)
