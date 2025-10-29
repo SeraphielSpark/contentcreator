@@ -1,8 +1,10 @@
-flask
-flask-cors
-flask-bcrypt
-flask-jwt-extended
-flask-sqlalchemy
-google-genai
-gunicorn
+Flask
+Flask-CORS
+Flask-SQLAlchemy
+Flask-Bcrypt
+Flask-JWT-Extended
 PyJWT
+requests
+Pillow
+google-generativeai
+gunicorn
