@@ -206,9 +206,23 @@ STYLE_PROMPTS = {
             "The image must be 8K, ultra-high resolution, with crystal-clear, edge-to-edge focus and perfectly balanced, "
             "true-to-life colors. Must be commercially viable, pristine, and look professionally retouched."
         )
-    }
-}
+    },
+    "spooky": {
+    "artist_style": "a world-class cinematic horror photographer and visual effects director specializing in realistic Halloween imagery",
+    "style_description": (
+        "A hyper-realistic, cinematic Halloween portrait that transforms the subject into a spooky, haunting, yet believable character. "
+        "Change the subject’s clothing, background, and environment to fully match a Halloween theme (such as witch, vampire, ghost, pumpkin queen, or dark angel), "
+        "but DO NOT alter or distort the subject’s original face, features, or expression — their identity must remain perfectly recognizable. "
+        "Apply detailed, eerie atmospheric lighting (moonlight, fog, candle glow, or flickering shadows) with realistic volumetric effects. "
+        "Use ultra-sharp 8K resolution, professional-grade color grading, and meticulous texture enhancement. "
+        "Backgrounds must be immersive and cinematic — haunted mansions, graveyards, forests, or gothic interiors — all with a photographic level of realism. "
+        "Include subtle motion in hair or clothing for dynamic presence. "
+        "Final output should look like a real Halloween photoshoot captured with a Canon R5 or Arri Alexa camera under dramatic studio lighting. "
+        "Deliver a perfect balance between spooky atmosphere and beautiful realism, ensuring it feels like a luxury Halloween editorial portrait, not a cartoon."
+    )
+},
 
+}
 
 # ------------------------
 # ✅ Database Models
@@ -443,33 +457,65 @@ def upload_reference():
 def generate_image():
     try:
         data = request.json
-        style_key = data.get("style", "default")
+        
+        # --- 1. Get all new fields from the frontend ---
         ref_filename = data.get("reference_filename")
+        theme = data.get("style") # e.g., "witch", "vampire"
+        look = data.get("look") # e.g., "realistic", "artistic"
+        color_tone = data.get("color_tone") # e.g., "blue moonlight"
+        usage = data.get("usage") # e.g., "profile picture"
 
         if not ref_filename:
             return jsonify({"error": "Reference filename missing"}), 400
+        if not theme:
+            return jsonify({"error": "Style (theme) missing"}), 400
 
-        style = STYLE_PROMPTS.get(style_key, STYLE_PROMPTS["default"])
+        # --- 2. Force the "spooky" prompt as the base style ---
+        # We use the detailed "spooky" prompt as the master instruction set
+        style_details = STYLE_PROMPTS.get("spooky")
+        artist = style_details['artist_style']
+
         ref_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(ref_filename))
 
         if not os.path.exists(ref_path):
             return jsonify({"error": "Reference image not found"}), 404
 
-        print(f"[INFO] Generating image in '{style_key}' style using {ref_filename}")
+        print(f"[INFO] Generating Halloween image. Theme: '{theme}', Look: '{look}', Tone: '{color_tone}'")
 
-        # Convert image to base64
+        # --- 3. Convert image to base64 (same as before) ---
         with Image.open(ref_path) as img:
             buffer = io.BytesIO()
+            # Resize image if it's too large to reduce base64 string size and improve API speed
+            img.thumbnail((1024, 1024)) 
             img.convert("RGB").save(buffer, format="JPEG")
             img_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
 
-        # Create Gemini request payload
+        # --- 4. Create a new DYNAMIC prompt using all fields ---
         prompt = (
-            f"You are a {style['artist_style']}.\n"
-            f"Recreate the person in {style['style_description']}.\n"
-            "Maintain the same face, gender, and posture."
+            f"You are {artist}.\n"
+            f"Your task is to transform the person in the reference photo into a Halloween character. "
+            f"**The most important rule is to strictly maintain their exact face, features, expression, and identity. DO NOT change their face.**\n\n"
+            f"--- Main Theme ---\n"
+            f"The desired character theme is: **{theme}**.\n\n"
+            f"--- Desired Look ---\n"
+            f"The final image must have a **{look}** look. If 'artistic' or 'cinematic', add drama, atmosphere, and a painterly feel. If 'realistic', make it look like a real, high-end 8K photoshoot.\n\n"
+            f"--- Color & Tone ---\n"
+            f"Apply this specific color grade and mood: **{color_tone}**. If '{color_tone}' is 'No preference' or blank, use a color tone that best matches the {theme} (e.g., dark blues for Vampire, eerie greens for Zombie).\n\n"
+            f"--- Image Usage ---\n"
+            f"The image will be used for: **{usage}**. Adapt the composition accordingly: "
+            f"  - 'Profile Picture': A powerful, closer-up medium shot or headshot. "
+            f"  - 'Social Media Post': A dynamic 1:1 square composition. "
+            f"  - 'Social Media Story': A 9:16 vertical composition. "
+            f"  - 'Print': Maximum 8K detail, ultra-high resolution. "
+            f"  - 'Just for fun': A standard, well-balanced shot.\n\n"
+            f"--- Final Instruction ---\n"
+            f"Combine all elements. Change the clothing and background to be 100% appropriate for the {theme} and {look}. "
+            f"For example, for a 'Witch' theme, add a witch's hat, robes, and a spooky forest or magical library background. "
+            f"**Repeat: Keep the subject's original face and identity perfectly recognizable.**"
         )
 
+
+        # --- 5. Build payload (same as before, but with new prompt) ---
         payload = {
             "contents": [{
                 "parts": [
@@ -477,13 +523,17 @@ def generate_image():
                     {"inline_data": {"mime_type": "image/jpeg", "data": img_base64}}
                 ]
             }],
-            "generationConfig": {"temperature": 0.7, "topP": 0.9},
+            "generationConfig": {
+                "temperature": 0.6, # Slightly lower temp for more consistency
+                "topP": 0.9,
+                "topK": 40
+            },
         }
 
         headers = {"Content-Type": "application/json"}
-        # Using the API_URL defined at the top, which uses requests, not the SDK
         response = requests.post(API_URL, headers=headers, json=payload, timeout=180)
 
+        # --- 6. Handle response (same as before) ---
         if response.status_code != 200:
             print(f"[ERROR] Gemini API Error: {response.text}")
             return jsonify({"error": f"Gemini API returned {response.status_code}", "details": response.text}), response.status_code
@@ -493,12 +543,16 @@ def generate_image():
         if "promptFeedback" in result:
              print(f"[WARN] Gemini returned promptFeedback: {result['promptFeedback']}")
              block_reason = result.get("promptFeedback", {}).get("blockReason", "Unknown")
-             return jsonify({"error": f"Generation failed due to safety settings: {block_reason}"}), 400
+             if block_reason != "SAFETY": # Don't error on non-safety blocks if candidates exist
+                pass
+             elif not result.get("candidates"):
+                return jsonify({"error": f"Generation failed due to safety settings: {block_reason}"}), 400
 
         candidates = result.get("candidates", [])
         if not candidates:
-            print("[WARN] Gemini returned no candidates.")
-            return jsonify({"error": "No output from Gemini"}), 400
+            print("[WARN] Gemini returned no candidates. Check promptFeedback.")
+            feedback = result.get("promptFeedback", "No feedback")
+            return jsonify({"error": "No output from Gemini. Generation may have been blocked.", "details": feedback}), 400
 
         parts = candidates[0].get("content", {}).get("parts", [])
         gen_b64 = None
@@ -514,8 +568,8 @@ def generate_image():
             print("[WARN] Gemini returned no image data.")
             return jsonify({"error": "Gemini returned no image data"}), 400
 
-        # Save generated image
-        generated_filename = f"gen_{int(time.time())}_{style_key}.jpg"
+        # --- 7. Save file (same as before, but with theme in name) ---
+        generated_filename = f"gen_{int(time.time())}_{theme}.jpg"
         generated_path = os.path.join(app.config['GENERATED_FOLDER'], generated_filename)
         with open(generated_path, "wb") as f:
             f.write(base64.b64decode(gen_b64))
@@ -554,4 +608,5 @@ if __name__ == "__main__":
     # Note: app.run() is fine for Render's environment, but gunicorn is preferred.
     # Since your working example uses this, we will keep it.
     app.run(host="0.0.0.0", port=port)
+
 
