@@ -93,6 +93,9 @@ db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 
+db_path = os.path.join("/tmp", "app.db")
+app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
+
 with app.app_context():
     db.create_all()
 # ------------------------
@@ -712,6 +715,7 @@ if __name__ == "__main__":
         print("Database ready.")
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
