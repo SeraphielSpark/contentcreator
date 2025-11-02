@@ -49,7 +49,6 @@ CORS(app,
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "fallback_secret_key_123")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=3)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:////data/users.db"
 app.config["JWT_SECRET_KEY"] = "super-secret-key"
 # --- [MERGED] Folder Configuration (from Image App) ---
 UPLOAD_FOLDER = 'uploads'
@@ -93,6 +92,10 @@ db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 
+# Remove this line:
+# app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:////data/users.db"
+
+# Keep this:
 db_path = os.path.join("/tmp", "app.db")
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
 
@@ -715,6 +718,7 @@ if __name__ == "__main__":
         print("Database ready.")
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
