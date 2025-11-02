@@ -40,16 +40,11 @@ app = Flask(__name__)
 
 # [FIXED] Updated CORS setup to explicitly allow Authorization headers
 CORS(app,
-    supports_credentials=True,
-    origins=[
-        "http://127.0.0.1:5500",
-        "http://localhost:5000",
-        "https://content-creator-assistance.onrender.com"  # ✅ add your actual Render frontend URL
-    ],
-    allow_headers=["Content-Type", "Authorization"],
-    expose_headers=["Authorization"]
-)
-
+     resources={r"/*": {"origins": ["*"]}},
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization"],
+     expose_headers=["Authorization", "Content-Type"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 # --- App Configuration ---
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "fallback_secret_key_123")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -717,6 +712,7 @@ if __name__ == "__main__":
         print("Database ready.")
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
