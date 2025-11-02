@@ -6,7 +6,9 @@ import base64
 import requests
 from PIL import Image
 from flask import Flask, request, jsonify, send_from_directory
-from google import genai
+# Note: Ensure 'google.genai' is updated in your requirements.txt
+# (as 'google-generativeai') to fix the 'no attribute configure' error.
+from google import genai 
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
@@ -38,19 +40,21 @@ def get_jwt_identity_optional():
 # ------------------------
 app = Flask(__name__)
 
-# [FIXED] Updated CORS setup to explicitly allow Authorization headers
+# Updated CORS setup
 CORS(app,
      resources={r"/*": {"origins": ["*"]}},
      supports_credentials=True,
      allow_headers=["Content-Type", "Authorization"],
      expose_headers=["Authorization", "Content-Type"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+
 # --- App Configuration ---
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "fallback_secret_key_123")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=3)
 app.config["JWT_SECRET_KEY"] = "super-secret-key"
-# --- [MERGED] Folder Configuration (from Image App) ---
+
+# --- Folder Configuration ---
 UPLOAD_FOLDER = 'uploads'
 GENERATED_FOLDER = 'generated'
 app.config['UPLOAD_FOLDER'] = os.path.abspath(UPLOAD_FOLDER)
@@ -62,24 +66,35 @@ os.makedirs(app.config['GENERATED_FOLDER'], exist_ok=True)
 print(f"[INFO] Upload folder: {app.config['UPLOAD_FOLDER']}")
 print(f"[INFO] Generated folder: {app.config['GENERATED_FOLDER']}")
 
+# --- Database Path ---
+# Using /tmp for compatibility with read-only filesystems like Render
+db_path = os.path.join("/tmp", "app.db")
+app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
+print(f"[INFO] Database path: {app.config['SQLALCHEMY_DATABASE_URI']}")
+
+
 # ------------------------
-# ✅ [MERGED] Google API Configuration
+# ✅ Google API Configuration
 # ------------------------
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY") 
 if not GOOGLE_API_KEY:
+    # This error will still appear until you set it in your Render environment
     print("[FATAL ERROR] GOOGLE_API_KEY is not set.")
 
-# --- [FIXED] 1. Client for Text Generation ---
+# --- 1. Client for Text Generation ---
 try:
+    # This requires an updated 'google-generativeai' library
     genai.configure(api_key=GOOGLE_API_KEY)
     text_model = genai.GenerativeModel('gemini-1.5-flash')
     print("[INFO] Google GenAI SDK (for Text) initialized.")
 except Exception as e:
+    # This will catch the 'has no attribute configure' error if library is old
     print(f"[ERROR] Failed to initialize Google GenAI client: {e}")
     text_model = None
 
 # --- 2. REST API URL for Image Generation ---
 MODEL_NAME = "gemini-2.5-flash-image" 
+# Ensure GOOGLE_API_KEY1 is also set in your environment
 GOOGLE_API_KEY1 = os.environ.get("GOOGLE_API_KEY1")
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={GOOGLE_API_KEY1}"
 print(f"[INFO] Image API (REST) endpoint set for model: {MODEL_NAME}")
@@ -92,17 +107,14 @@ print(f"[INFO] Image API (REST) endpoint set for model: {MODEL_NAME}")
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 
-# Remove this line:
-# app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:////data/users.db"
+# ✅✅✅ --- FIX --- ✅✅✅
+# Initialize SQLAlchemy *after* app config is set
+db = SQLAlchemy(app)
+# ✅✅✅ ----------- ✅✅✅
 
-# Keep this:
-db_path = os.path.join("/tmp", "app.db")
-app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
 
-with app.app_context():
-    db.create_all()
 # ------------------------
-# ✅ [MERGED] Style Prompts (from your original app)
+# ✅ [MERGED] Style Prompts
 # ------------------------
 STYLE_PROMPTS = {
     # ... (Your "restore", "cinematic", "portrait", etc. prompts are all still here) ...
@@ -157,7 +169,7 @@ STYLE_PROMPTS = {
         "style_description": (
             "An epic, painterly, and hyper-detailed fantasy portrait with dynamic, visible brushstrokes. "
             "The subject is captured in a dynamic, heroic pose, adorned with intricate, battle-worn, glowing armor and mythical artifacts. "
-            "The scene is lit with dramatic chiaroscuro and powerful volumetric god-rays, which illuminate swirling "
+            "The scene is lit with dramatic chiaroscurp and powerful volumetric god-rays, which illuminate swirling "
             "magical particle effects and atmospheric fog. The background is a vast, mythical landscape with "
             "a strong sense of atmospheric perspective and epic scale."
         )
@@ -242,21 +254,20 @@ STYLE_PROMPTS = {
 # ------------------------
 # ✅ Database Models
 # ------------------------
+# These models are now defined *after* db = SQLAlchemy(app)
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)    
     searches = db.relationship('SearchHistory', backref='author', lazy=True)
     
-    # --- [MODIFIED] Fields for Credit System ---
+    # --- Fields for Credit System ---
     plan = db.Column(db.String(100), nullable=False, default='free') # e.g., 'free', 'standard'
-    credits = db.Column(db.Integer, nullable=False, default=200) # Start new users with 50 credits
-    # -------------------------------------------
+    credits = db.Column(db.Integer, nullable=False, default=200) # Start new users with 200 credits
     
     def __repr__(self):
         # [MODIFIED] Updated to show credits
-        print(self.credits)
-        return f"User('{self.email}', Plan: '{self.plan}', Credits: {self.credits})"
+        return f"User('{self.username}', Plan: '{self.plan}', Credits: {self.credits})"
 
 
 class SearchHistory(db.Model):
@@ -279,26 +290,39 @@ class SearchHistory(db.Model):
             'timestamp': self.timestamp.isoformat()
         }
 
+# ------------------------
+# ✅ Create Tables
+# ------------------------
+# ✅✅✅ --- FIX --- ✅✅✅
+# This is moved to *after* the models (User, SearchHistory) are defined.
+with app.app_context():
+    print("[INFO] Initializing database tables...")
+    db.create_all()
+    print("[INFO] Database tables initialized.")
+# ✅✅✅ ----------- ✅✅✅
+
 
 # ------------------------
 # ✅ JWT Config
 # ------------------------
 
-# --- [FIXED] This function has been REMOVED ---
+# --- [FIXED] This function has been REMOVED (as in your original) ---
 # @jwt.user_identity_loader
-# def user_identity_lookup(user):
-#     return user.id
-# --- End of removal ---
+# ...
+
 @jwt.user_lookup_loader
 def user_lookup_callback(_jwt_header, jwt_data):
     identity = jwt_data["sub"]
     try:
+        # This will now work because User model is defined
         return User.query.get(int(identity))
     except (ValueError, TypeError):
         return None
 
+# This variable 'number' doesn't seem to be used anywhere.
+# It's harmless, but you could remove it.
+number = '' 
 
-number = ''
 @app.before_request
 def preserve_authorization_header():
     if "Authorization" not in request.headers and "HTTP_AUTHORIZATION" in request.environ:
@@ -314,7 +338,7 @@ def home():
 
 
 # ------------------------
-# ✅ Hashtag Generator Route (Not used by this UI but part of API)
+# ✅ Hashtag Generator Route
 # ------------------------
 @app.route("/generate", methods=["POST"])
 def generate():
@@ -352,7 +376,7 @@ def generate():
 
 
 # ------------------------
-# ✅ Chat Response Route (Not used by this UI but part of API)
+# ✅ Chat Response Route
 # ------------------------
 @app.route("/respond", methods=["POST"])
 def respond():
@@ -384,8 +408,6 @@ def respond():
         return jsonify({"error": str(e)}), 500
 
 # ----------------------------
-
-# ----------------------------
 # Register endpoint
 # ----------------------------
 @app.route("/auth/register", methods=["POST"])
@@ -395,7 +417,6 @@ def register():
     username = data.get("email")
     password = data.get("password")
 
-    # ✅ Validation
     if not username or not password:
         return jsonify({"msg": "Username and password are required"}), 400
 
@@ -434,27 +455,23 @@ def login():
     if not user or not bcrypt.check_password_hash(user.password, password):
         return jsonify({"msg": "Invalid credentials"}), 401
 
-    # ✅ FIX — identity must be a string
     token = create_access_token(identity=str(user.id))
-    print(f"[INFO] Login successful for: {user.username} and the credit is {user.credits}")
-    db.session.close() # Added for session safety
-    user1 = {
+    print(f"[INFO] Login successful for: {user.username} (Credits: {user.credits})")
+    
+    # Create user info object *before* closing session
+    user_info = {       
         "id": user.id,
         "email": user.username,
         "plan": user.plan,
-        "credits": user.credits,
-        'point':user.credits
-    }
-    print(user1)
-    return jsonify( {       
-        "id": user.id,
-        "email": user.username,
-        "plan": user.plan,
-        "credits": 200,
-        "point":user.credits,
+        "credits": user.credits, # Send the actual current credits
+        "point": user.credits,   # 'point' seems redundant, but keeping your structure
         'access_token': token
-        }), 200
-# --- [MODIFIED] Endpoint to get current user info (sends credits) ---
+    }
+    
+    db.session.close() # Good practice
+    
+    print(f"[INFO] Returning user info: {user_info}")
+    return jsonify(user_info), 200
 
 
 # ------------------------
@@ -499,7 +516,7 @@ def get_history():
 # ---------------------------------------------
 
 @app.route('/upload-reference', methods=['POST'])
-@jwt_required(optional=True) 
+@jwt_required(optional=True) # Allows upload even if not logged in
 def upload_reference():
     try:
         if 'file' not in request.files:
@@ -524,16 +541,12 @@ def upload_reference():
         print(f"[ERROR] Upload failed: {e}")
         return jsonify({"error": str(e)}), 500
 
-#
-# -----------------------------------------------------------------------
-# 👇👇👇 START OF [MODIFIED] SECTION 👇👇👇
-# -----------------------------------------------------------------------
-#
+
 @app.route('/generate-image', methods=['POST'])
 @jwt_required()
 def generate_image():
     IMAGE_COST = 10
-    current_user = get_current_user()
+    current_user = get_current_user() # This works thanks to user_lookup_loader
 
     if current_user.credits < IMAGE_COST:
         print(f"[LIMIT] User {current_user.username} (Credits: {current_user.credits}) needs {IMAGE_COST}.")
@@ -552,7 +565,8 @@ def generate_image():
         if not theme:
             return jsonify({"error": "Style (theme) missing"}), 400
 
-        style_details = STYLE_PROMPTS.get("spooky", {"artist_style": "fantasy portrait painter"})
+        # Using "spooky" as default as in your code, but you could default to "default"
+        style_details = STYLE_PROMPTS.get("spooky", STYLE_PROMPTS["default"])
         artist = style_details["artist_style"]
 
         ref_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(ref_filename))
@@ -564,9 +578,10 @@ def generate_image():
         # Convert image to base64 safely
         with Image.open(ref_path) as img:
             buffer = io.BytesIO()
-            img.thumbnail((1024, 1024))
+            img.thumbnail((1024, 1024)) # Resize to prevent overly large payloads
             img.convert("RGB").save(buffer, format="JPEG", quality=90)
             img_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+        
         # Prompt
         prompt = (
             f"You are {artist}.\n"
@@ -607,7 +622,7 @@ def generate_image():
         }
         headers = {"Content-Type": "application/json"}
 
-        # ✅ Added connection resilience
+        # Added connection resilience
         try:
             response = requests.post(
                 API_URL,
@@ -625,7 +640,7 @@ def generate_image():
             print(f"[ERROR] Unexpected network error: {e}")
             return jsonify({"error": f"Network error: {str(e)}"}), 500
 
-        # ✅ Handle Gemini response
+        # Handle Gemini response
         if response.status_code != 200:
             print(f"[ERROR] Gemini API Error {response.status_code}: {response.text}")
             return jsonify({"error": f"Gemini API returned {response.status_code}", "details": response.text}), response.status_code
@@ -651,7 +666,7 @@ def generate_image():
             if "inline_data" in part:
                 gen_b64 = part["inline_data"]["data"]
                 break
-            elif "inlineData" in part:
+            elif "inlineData" in part: # Handle both casings
                 gen_b64 = part["inlineData"]["data"]
                 break
 
@@ -667,37 +682,42 @@ def generate_image():
         generated_url = f"/generated/{generated_filename}"
 
         # Update credits + history safely
-        current_user.credits -= IMAGE_COST
+        # We fetch the user again *inside* the session to be safe
+        user_to_update = db.session.get(User, current_user.id)
+        if not user_to_update:
+             return jsonify({"error": "User not found during credit update"}), 500
+             
+        user_to_update.credits -= IMAGE_COST
+        
         history_title = f"{theme.title()} ({look.title()})"
         new_history_item = SearchHistory(
             title=history_title,
             prompt_content=prompt,
             generated_result=generated_url,
-            user_id=current_user.id
+            user_id=user_to_update.id
         )
         db.session.add(new_history_item)
         db.session.commit()
+        
+        new_credit_count = user_to_update.credits
+        db.session.close() # Close session after commit
 
-        print(f"[INFO] Generation complete for {current_user.username}: {generated_filename} (Credits left: {current_user.credits})")
+        print(f"[INFO] Generation complete for {user_to_update.username}: {generated_filename} (Credits left: {new_credit_count})")
 
         return jsonify({
             "message": "Image generated successfully",
             "generated_image_url": generated_url,
-            "new_credit_count": current_user.credits
+            "new_credit_count": new_credit_count
         }), 200
 
     except Exception as e:
         print(f"[ERROR] Generation failed: {e}")
-        db.session.rollback()
+        db.session.rollback() # Rollback any partial db changes on error
         return jsonify({"error": str(e)}), 500
-#
-# -----------------------------------------------------------------------
-# 👆👆👆 END OF MODIFIED SECTION 👆👆👆
-# -----------------------------------------------------------------------
-#
+
 
 # ------------------------------------------------------
-# 🗂 [NEW/MERGED] Serve Uploaded and Generated Files
+# 🗂 Serve Uploaded and Generated Files
 # ------------------------------------------------------
 @app.route('/uploads/<path:filename>')
 def serve_upload(filename):
@@ -709,20 +729,16 @@ def serve_generated(filename):
 
 
 # ------------------------
-# ✅ Server Runner for Render
+# ✅ Server Runner
 # ------------------------
 if __name__ == "__main__":
+    # The db.create_all() here is fine for local dev.
+    # The one inside the app_context at the top handles the Gunicorn boot.
     with app.app_context():
-        print("Checking/creating database tables...")
+        print("Checking/creating database tables for local run...")
         db.create_all()
         print("Database ready.")
+    
+    # Use 0.0.0.0 to be accessible externally (like Gunicorn does)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
-
-
-
-
-
-
-
-
