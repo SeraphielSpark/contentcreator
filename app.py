@@ -76,10 +76,11 @@ print(f"[INFO] Database path: {app.config['SQLALCHEMY_DATABASE_URI']}")
 # ------------------------
 # ✅ Google API Configuration
 # ------------------------
+# [MODIFIED] Using updated environment variable name
 GOOGLE_API_KEY = os.environ.get("GEMINI_API_KEY") 
 if not GOOGLE_API_KEY:
     # This error will still appear until you set it in your Render environment
-    print("[FATAL ERROR] GOOGLE_API_KEY is not set.")
+    print("[FATAL ERROR] GEMINI_API_KEY is not set.")
 
 # --- 1. Client for Text Generation ---
 try:
@@ -94,8 +95,11 @@ except Exception as e:
 
 # --- 2. REST API URL for Image Generation ---
 MODEL_NAME = "gemini-2.5-flash-image" 
-# Ensure GOOGLE_API_KEY1 is also set in your environment
+# [MODIFIED] Using updated environment variable name
 GOOGLE_API_KEY1 = os.environ.get("GEMINI")
+if not GOOGLE_API_KEY1:
+    print("[FATAL ERROR] GEMINI (for Image API) is not set.")
+
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={GOOGLE_API_KEY1}"
 print(f"[INFO] Image API (REST) endpoint set for model: {MODEL_NAME}")
 
@@ -114,7 +118,7 @@ db = SQLAlchemy(app)
 
 
 # ------------------------
-# ✅ [MERGED] Style Prompts
+# ✅ [MERGED] Style Prompts (Keeping for legacy/reference)
 # ------------------------
 STYLE_PROMPTS = {
     # ... (Your "restore", "cinematic", "portrait", etc. prompts are all still here) ...
@@ -482,17 +486,17 @@ def login():
 def save_history():
     user_id = get_jwt_identity()
     data = request.get_json()
-    prompt = data.get("prompt")
-    result = data.get("result") 
+    # [MODIFIED] Get the full prompt from the request
+    prompt = data.get("prompt") # This will be the full prompt string
+    result = data.get("result") # This is the generated_url
+    title = data.get("title")   # Get the simple title (e.g., "LinkedIn Classic")
 
-    if not prompt or not result:
-        return jsonify({"error": "Prompt and result required"}), 400
-
-    title = (prompt[:40] + "...") if len(prompt) > 40 else prompt
+    if not prompt or not result or not title:
+        return jsonify({"error": "Title, prompt, and result required"}), 400
     
     new_item = SearchHistory(
         title=title, 
-        prompt_content=prompt,
+        prompt_content=prompt, # Save the full detailed prompt
         generated_result=result,
         user_id=user_id
     )
@@ -512,7 +516,7 @@ def get_history():
 
 
 # ---------------------------------------------
-# ✅ [NEW/MERGED] IMAGE GENERATION ROUTES
+# ✅ IMAGE GENERATION ROUTES
 # ---------------------------------------------
 
 @app.route('/upload-reference', methods=['POST'])
@@ -554,26 +558,31 @@ def generate_image():
 
     try:
         data = request.json
+        # [MODIFIED] Get all new fields from frontend
         ref_filename = data.get("reference_filename")
-        theme = data.get("style")
+        category = data.get("category")
+        theme = data.get("theme")
         look = data.get("look")
         color_tone = data.get("color_tone")
         usage = data.get("usage")
+        custom_prompt = data.get("custom_prompt") # This can be None
 
+        # [MODIFIED] Validate new fields
         if not ref_filename:
             return jsonify({"error": "Reference filename missing"}), 400
+        if not category:
+            return jsonify({"error": "Category missing"}), 400
         if not theme:
-            return jsonify({"error": "Style (theme) missing"}), 400
+            return jsonify({"error": "Theme missing"}), 400
 
-        # Using "spooky" as default as in your code, but you could default to "default"
-        style_details = STYLE_PROMPTS.get("spooky", STYLE_PROMPTS["default"])
-        artist = style_details["artist_style"]
+        # [MODIFIED] Use a generic artist, as style is now dynamic
+        artist = "a world-class digital artist and photo-manipulation expert"
 
         ref_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(ref_filename))
         if not os.path.exists(ref_path):
             return jsonify({"error": "Reference image not found"}), 404
 
-        print(f"[INFO] User {current_user.username} generating image. Theme: '{theme}', Look: '{look}', Tone: '{color_tone}'")
+        print(f"[INFO] User {current_user.username} generating image. Theme: '{theme}', Look: '{look}'")
 
         # Convert image to base64 safely
         with Image.open(ref_path) as img:
@@ -582,17 +591,19 @@ def generate_image():
             img.convert("RGB").save(buffer, format="JPEG", quality=90)
             img_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
         
-        # Prompt
+        # [MODIFIED] Create the new dynamic prompt
         prompt = (
             f"You are {artist}.\n"
-            f"Your task is to transform the person in the reference photo into a Halloween character. "
+            f"Your task is to transform the person in the reference photo according to the user's request. "
             f"**The most important rule is to strictly maintain their exact face, features, expression, and identity. DO NOT change their face.**\n\n"
+            f"--- Main Category ---\n"
+            f"The desired category is: **{category}**.\n\n"
             f"--- Main Theme ---\n"
-            f"The desired character theme is: **{theme}**.\n\n"
+            f"The desired theme is: **{theme}**. This means you must change the clothing, background, and overall atmosphere to match this theme. For example, if the theme is 'LinkedIn Classic', give them professional attire and a clean, neutral background. If 'Epic Knight', give them armor and a fantasy background.\n\n"
             f"--- Desired Look ---\n"
             f"The final image must have a **{look}** look. If 'artistic' or 'cinematic', add drama, atmosphere, and a painterly feel. If 'realistic', make it look like a real, high-end 8K photoshoot.\n\n"
             f"--- Color & Tone ---\n"
-            f"Apply this specific color grade and mood: **{color_tone}**. If '{color_tone}' is 'No preference' or blank, use a color tone that best matches the {theme} (e.g., dark blues for Vampire, eerie greens for Zombie).\n\n"
+            f"Apply this specific color grade and mood: **{color_tone}**. If '{color_tone}' is 'No preference' or blank, use a color tone that best matches the **{theme}**.\n\n"
             f"--- Image Usage ---\n"
             f"The image will be used for: **{usage}**. Adapt the composition accordingly: "
             f"  - 'Profile Picture': A powerful, closer-up medium shot or headshot. "
@@ -600,11 +611,23 @@ def generate_image():
             f"  - 'Social Media Story': A 9:16 vertical composition. "
             f"  - 'Print': Maximum 8K detail, ultra-high resolution. "
             f"  - 'Just for fun': A standard, well-balanced shot.\n\n"
+        )
+
+        # [NEW] Append custom prompt if it exists
+        if custom_prompt:
+            prompt += (
+                f"--- Additional User Instructions ---\n"
+                f"{custom_prompt}\n\n"
+            )
+
+        # Final instruction
+        prompt += (
             f"--- Final Instruction ---\n"
-            f"Combine all elements. Change the clothing and background to be 100% appropriate for the {theme} and {look}. "
-            f"For example, for a 'Witch' theme, add a witch's hat, robes, and a spooky forest or magical library background. "
+            f"Combine all elements. Change the clothing and background to be 100% appropriate for the **{theme}** and **{look}**. "
             f"**Repeat: Keep the subject's original face and identity perfectly recognizable.**"
         )
+        
+        # --- End of [MODIFIED] prompt ---
 
 
         payload = {
@@ -674,7 +697,7 @@ def generate_image():
             return jsonify({"error": "Gemini returned no image data"}), 400
 
         # Save generated image
-        generated_filename = f"gen_{int(time.time())}_{secure_filename(theme)}.jpg"
+        generated_filename = f"gen_{int(time.time())}_{secure_filename(theme.split(' ')[0])}.jpg"
         generated_path = os.path.join(app.config['GENERATED_FOLDER'], generated_filename)
         with open(generated_path, "wb") as f:
             f.write(base64.b64decode(gen_b64))
@@ -689,10 +712,11 @@ def generate_image():
              
         user_to_update.credits -= IMAGE_COST
         
+        # [MODIFIED] Use the 'theme' as the title for history
         history_title = f"{theme.title()} ({look.title()})"
         new_history_item = SearchHistory(
             title=history_title,
-            prompt_content=prompt,
+            prompt_content=prompt, # Save the full prompt
             generated_result=generated_url,
             user_id=user_to_update.id
         )
@@ -707,7 +731,9 @@ def generate_image():
         return jsonify({
             "message": "Image generated successfully",
             "generated_image_url": generated_url,
-            "new_credit_count": new_credit_count
+            "new_credit_count": new_credit_count,
+            "prompt_for_history": prompt, # [NEW] Send prompt back to frontend
+            "title_for_history": history_title # [NEW] Send title back to frontend
         }), 200
 
     except Exception as e:
