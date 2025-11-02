@@ -6,7 +6,7 @@ import base64
 import requests
 from PIL import Image
 from flask import Flask, request, jsonify, send_from_directory
-from google import genai  # ✅ Correct import for Google GenAI SDK (from your working example)
+from google import genai
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
@@ -15,7 +15,8 @@ from flask_jwt_extended import (
     get_jwt_identity,
     jwt_required,
     JWTManager,
-    verify_jwt_in_request
+    verify_jwt_in_request,
+    get_current_user
 )
 from flask_jwt_extended.exceptions import NoAuthorizationError
 from jwt import ExpiredSignatureError
@@ -36,15 +37,21 @@ def get_jwt_identity_optional():
 # ✅ Flask App Setup
 # ------------------------
 app = Flask(__name__)
-CORS(app)
+
+# [FIXED] Updated CORS setup to explicitly allow Authorization headers
+CORS(app, 
+    supports_credentials=True, 
+    origins=["http://127.0.0.1:5500", "http://localhost:5000"], # <-- CHANGED THIS LINE
+    allow_headers=["Content-Type", "Authorization"], 
+    expose_headers=["Authorization"]
+)
 
 # --- App Configuration ---
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "fallback_secret_key_123")
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///site.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "fallback_jwt_secret_456")
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=3)
-
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///users.db"
+app.config["JWT_SECRET_KEY"] = "super-secret-key"
 # --- [MERGED] Folder Configuration (from Image App) ---
 UPLOAD_FOLDER = 'uploads'
 GENERATED_FOLDER = 'generated'
@@ -60,21 +67,22 @@ print(f"[INFO] Generated folder: {app.config['GENERATED_FOLDER']}")
 # ------------------------
 # ✅ [MERGED] Google API Configuration
 # ------------------------
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY") #'AIzaSyAEGRhQSYTSCaTlm0_Ep-37OQAUd_-4R4M'os.environ.get("GOOGLE_API_KEY")
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY") 
 if not GOOGLE_API_KEY:
-    print("[FATAL ERROR] GOOGLE_API_KEY is not set. Please add it in Render Environment Variables.")
+    print("[FATAL ERROR] GOOGLE_API_KEY is not set.")
 
-# --- 1. Client for Text Generation (from your working app) ---
+# --- [FIXED] 1. Client for Text Generation ---
 try:
-    client = genai.Client(api_key=GOOGLE_API_KEY)
+    genai.configure(api_key=GOOGLE_API_KEY)
+    text_model = genai.GenerativeModel('gemini-1.5-flash')
     print("[INFO] Google GenAI SDK (for Text) initialized.")
 except Exception as e:
     print(f"[ERROR] Failed to initialize Google GenAI client: {e}")
-    client = None
+    text_model = None
 
-# --- 2. REST API URL for Image Generation (from your original app) ---
-MODEL_NAME = "gemini-2.5-flash-image"
-GOOGLE_API_KEY1 = os.environ.get("GOOGLE_API_KEY1") #'AIzaSyAEGRhQSYTSCaTlm0_Ep-37OQAUd_-4R4M'os.environ.get("GOOGLE_API_KEY")
+# --- 2. REST API URL for Image Generation ---
+MODEL_NAME = "gemini-2.5-flash-image" 
+GOOGLE_API_KEY1 = os.environ.get("GOOGLE_API_KEY1")
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={GOOGLE_API_KEY1}"
 print(f"[INFO] Image API (REST) endpoint set for model: {MODEL_NAME}")
 
@@ -90,7 +98,7 @@ jwt = JWTManager(app)
 # ✅ [MERGED] Style Prompts (from your original app)
 # ------------------------
 STYLE_PROMPTS = {
-    # The "Restore" prompt, now heavily detailed and restrictive
+    # ... (Your "restore", "cinematic", "portrait", etc. prompts are all still here) ...
     "restore": {
         "artist_style": "a world-class forensic photo restoration specialist and lead digital conservator",
         "style_description": (
@@ -107,7 +115,6 @@ STYLE_PROMPTS = {
         )
     },
     
-    # All other prompts, expanded for powerful control
     "cinematic": {
         "artist_style": "an award-winning cinematic director and Director of Photography, in the style of Roger Deakins or Denis Villeneuve",
         "style_description": (
@@ -222,27 +229,34 @@ STYLE_PROMPTS = {
         "Deliver a perfect balance between spooky atmosphere and beautiful realism, ensuring it feels like a luxury Halloween editorial portrait, not a cartoon."
     )
 },
-
 }
+
 
 # ------------------------
 # ✅ Database Models
 # ------------------------
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(60), nullable=False)
+    username = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(255), nullable=False)    
     searches = db.relationship('SearchHistory', backref='author', lazy=True)
-
+    
+    # --- [MODIFIED] Fields for Credit System ---
+    plan = db.Column(db.String(100), nullable=False, default='free') # e.g., 'free', 'standard'
+    credits = db.Column(db.Integer, nullable=False, default=200) # Start new users with 50 credits
+    # -------------------------------------------
+    
     def __repr__(self):
-        return f"User('{self.email}')"
+        # [MODIFIED] Updated to show credits
+        print(self.credits)
+        return f"User('{self.email}', Plan: '{self.plan}', Credits: {self.credits})"
 
 
 class SearchHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     prompt_content = db.Column(db.Text, nullable=False)
-    generated_result = db.Column(db.Text, nullable=False)
+    generated_result = db.Column(db.Text, nullable=False) # This will store the /generated/ URL
     timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
@@ -262,15 +276,22 @@ class SearchHistory(db.Model):
 # ------------------------
 # ✅ JWT Config
 # ------------------------
-@jwt.user_identity_loader
-def user_identity_lookup(user):
-    return user.id
 
+# --- [FIXED] This function has been REMOVED ---
+# @jwt.user_identity_loader
+# def user_identity_lookup(user):
+#     return user.id
+# --- End of removal ---
 @jwt.user_lookup_loader
 def user_lookup_callback(_jwt_header, jwt_data):
     identity = jwt_data["sub"]
-    return User.query.get(identity)
+    try:
+        return User.query.get(int(identity))
+    except (ValueError, TypeError):
+        return None
 
+
+number = ''
 
 # ------------------------
 # ✅ Home Route
@@ -281,7 +302,7 @@ def home():
 
 
 # ------------------------
-# ✅ Hashtag Generator Route
+# ✅ Hashtag Generator Route (Not used by this UI but part of API)
 # ------------------------
 @app.route("/generate", methods=["POST"])
 def generate():
@@ -307,13 +328,10 @@ def generate():
     """
 
     try:
-        if not client:
+        if not text_model:
              return jsonify({"error": "Google AI client not initialized. Check API Key."}), 500
         
-        response = client.models.generate_content(
-            model="gemini-2.0-flash", # Using model from your working example
-            contents=prompt
-        )
+        response = text_model.generate_content(prompt)
         result = response.text.strip() if hasattr(response, "text") else "No response text received."
         return jsonify({"result": result})
     except Exception as e:
@@ -322,7 +340,7 @@ def generate():
 
 
 # ------------------------
-# ✅ Chat Response Route
+# ✅ Chat Response Route (Not used by this UI but part of API)
 # ------------------------
 @app.route("/respond", methods=["POST"])
 def respond():
@@ -343,57 +361,100 @@ def respond():
     """
 
     try:
-        if not client:
+        if not text_model:
              return jsonify({"error": "Google AI client not initialized. Check API Key."}), 500
         
-        response = client.models.generate_content(
-            model="gemini-2.0-flash", # Using model from your working example
-            contents=chat_prompt
-        )
+        response = text_model.generate_content(chat_prompt)
         result = response.text.strip() if hasattr(response, "text") else "No response text received."
         return jsonify({"result": result})
     except Exception as e:
         print(f"[ERROR] /respond: {e}")
         return jsonify({"error": str(e)}), 500
 
+# ----------------------------
 
-# ------------------------
-# ✅ Auth Routes
-# ------------------------
+# ----------------------------
+# Register endpoint
+# ----------------------------
 @app.route("/auth/register", methods=["POST"])
 def register():
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Request must be JSON"}), 400
-    email = data.get("email")
+    data = request.get_json() or {}
+
+    username = data.get("email")
     password = data.get("password")
-    if not email or not password:
-        return jsonify({"error": "Email and password required"}), 400
 
-    if User.query.filter_by(email=email).first():
-        return jsonify({"error": "Email already exists"}), 409
+    # ✅ Validation
+    if not username or not password:
+        return jsonify({"msg": "Username and password are required"}), 400
 
-    hashed = bcrypt.generate_password_hash(password).decode('utf-8')
-    user = User(email=email, password_hash=hashed)
-    db.session.add(user)
+    if User.query.filter_by(username=username).first():
+        return jsonify({"msg": "User already exists"}), 400
+
+    hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
+
+    new_user = User(
+        username=username,
+        password=hashed_password,
+        plan="free",
+        credits=200
+    )
+    db.session.add(new_user)
     db.session.commit()
-    return jsonify({"message": "User created successfully"}), 201
+
+    token = create_access_token(identity=str(new_user.id))
+    return jsonify({
+        "token": token,
+        "user_id": new_user.id,
+        "username": username
+    }), 201
 
 
+# ----------------------------
+# Login endpoint
+# ----------------------------
 @app.route("/auth/login", methods=["POST"])
 def login():
     data = request.get_json()
-    if not data:
-        return jsonify({"error": "Request must be JSON"}), 400
-    email = data.get("email")
+    username = data.get("email")
     password = data.get("password")
 
-    user = User.query.filter_by(email=email).first()
-    if not user or not bcrypt.check_password_hash(user.password_hash, password):
-        return jsonify({"error": "Invalid credentials"}), 401
+    user = User.query.filter_by(username=username).first()
+    if not user or not bcrypt.check_password_hash(user.password, password):
+        return jsonify({"msg": "Invalid credentials"}), 401
 
-    token = create_access_token(identity=user)
-    return jsonify(access_token=token), 200
+    # ✅ FIX — identity must be a string
+    token = create_access_token(identity=str(user.id))
+    print(f"[INFO] Login successful for: {user.username} and the credit is {user.credits}")
+    db.session.close() # Added for session safety
+    user1 = {
+        "id": user.id,
+        "email": user.username,
+        "plan": user.plan,
+        "credits": user.credits,
+        'point':user.credits
+    }
+    print(user1)
+    return jsonify( {       
+        "id": user.id,
+        "email": user.username,
+        "plan": user.plan,
+        "credits": 200,
+        "point":user.credits,
+        'access_token': token
+        }), 200
+# --- [MODIFIED] Endpoint to get current user info (sends credits) ---
+@app.route("/auth/me", methods=["GET"])
+@jwt_required()
+def get_me():
+    user = get_current_user()
+    print(f"[INFO] /auth/me requested for: {user}")
+    return jsonify({
+        "id": user.id,
+        "email": user.username,
+        "plan": user.plan,
+        "credits": user.credits
+    }), 200
+# -----------------------------------------------
 
 
 # ------------------------
@@ -405,15 +466,22 @@ def save_history():
     user_id = get_jwt_identity()
     data = request.get_json()
     prompt = data.get("prompt")
-    result = data.get("result")
+    result = data.get("result") 
 
     if not prompt or not result:
         return jsonify({"error": "Prompt and result required"}), 400
 
     title = (prompt[:40] + "...") if len(prompt) > 40 else prompt
-    new_item = SearchHistory(title=title, prompt_content=prompt, generated_result=result, user_id=user_id)
+    
+    new_item = SearchHistory(
+        title=title, 
+        prompt_content=prompt,
+        generated_result=result,
+        user_id=user_id
+    )
     db.session.add(new_item)
     db.session.commit()
+    db.session.close()
     return jsonify({"message": "History saved", "history_id": new_item.id}), 201
 
 
@@ -422,6 +490,7 @@ def save_history():
 def get_history():
     user_id = get_jwt_identity()
     items = SearchHistory.query.filter_by(user_id=user_id).order_by(SearchHistory.timestamp.desc()).all()
+    db.session.close()
     return jsonify([item.to_dict() for item in items]), 200
 
 
@@ -430,6 +499,7 @@ def get_history():
 # ---------------------------------------------
 
 @app.route('/upload-reference', methods=['POST'])
+@jwt_required(optional=True) 
 def upload_reference():
     try:
         if 'file' not in request.files:
@@ -447,51 +517,57 @@ def upload_reference():
         return jsonify({
             "message": "File uploaded successfully",
             "filename": filename,
-            "url": f"/uploads/{filename}" # Note: This URL is relative to the backend
+            "url": f"/uploads/{filename}"
         }), 200
 
     except Exception as e:
         print(f"[ERROR] Upload failed: {e}")
         return jsonify({"error": str(e)}), 500
 
+#
+# -----------------------------------------------------------------------
+# 👇👇👇 START OF [MODIFIED] SECTION 👇👇👇
+# -----------------------------------------------------------------------
+#
 @app.route('/generate-image', methods=['POST'])
+@jwt_required()
 def generate_image():
+    IMAGE_COST = 10
+    current_user = get_current_user()
+
+    if current_user.credits < IMAGE_COST:
+        print(f"[LIMIT] User {current_user.username} (Credits: {current_user.credits}) needs {IMAGE_COST}.")
+        return jsonify({"error": "Not enough credits"}), 403
+
     try:
         data = request.json
-        
-        # --- 1. Get all new fields from the frontend ---
         ref_filename = data.get("reference_filename")
-        theme = data.get("style") # e.g., "witch", "vampire"
-        look = data.get("look") # e.g., "realistic", "artistic"
-        color_tone = data.get("color_tone") # e.g., "blue moonlight"
-        usage = data.get("usage") # e.g., "profile picture"
+        theme = data.get("style")
+        look = data.get("look")
+        color_tone = data.get("color_tone")
+        usage = data.get("usage")
 
         if not ref_filename:
             return jsonify({"error": "Reference filename missing"}), 400
         if not theme:
             return jsonify({"error": "Style (theme) missing"}), 400
 
-        # --- 2. Force the "spooky" prompt as the base style ---
-        # We use the detailed "spooky" prompt as the master instruction set
-        style_details = STYLE_PROMPTS.get("spooky")
-        artist = style_details['artist_style']
+        style_details = STYLE_PROMPTS.get("spooky", {"artist_style": "fantasy portrait painter"})
+        artist = style_details["artist_style"]
 
         ref_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(ref_filename))
-
         if not os.path.exists(ref_path):
             return jsonify({"error": "Reference image not found"}), 404
 
-        print(f"[INFO] Generating Halloween image. Theme: '{theme}', Look: '{look}', Tone: '{color_tone}'")
+        print(f"[INFO] User {current_user.username} generating image. Theme: '{theme}', Look: '{look}', Tone: '{color_tone}'")
 
-        # --- 3. Convert image to base64 (same as before) ---
+        # Convert image to base64 safely
         with Image.open(ref_path) as img:
             buffer = io.BytesIO()
-            # Resize image if it's too large to reduce base64 string size and improve API speed
-            img.thumbnail((1024, 1024)) 
-            img.convert("RGB").save(buffer, format="JPEG")
+            img.thumbnail((1024, 1024))
+            img.convert("RGB").save(buffer, format="JPEG", quality=90)
             img_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
-
-        # --- 4. Create a new DYNAMIC prompt using all fields ---
+        # Prompt
         prompt = (
             f"You are {artist}.\n"
             f"Your task is to transform the person in the reference photo into a Halloween character. "
@@ -516,7 +592,6 @@ def generate_image():
         )
 
 
-        # --- 5. Build payload (same as before, but with new prompt) ---
         payload = {
             "contents": [{
                 "parts": [
@@ -525,35 +600,50 @@ def generate_image():
                 ]
             }],
             "generationConfig": {
-                "temperature": 0.6, # Slightly lower temp for more consistency
+                "temperature": 0.6,
                 "topP": 0.9,
                 "topK": 40
             },
         }
-
         headers = {"Content-Type": "application/json"}
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=180)
 
-        # --- 6. Handle response (same as before) ---
+        # ✅ Added connection resilience
+        try:
+            response = requests.post(
+                API_URL,
+                headers=headers,
+                json=payload,
+                timeout=(10, 180)  # (connect_timeout, read_timeout)
+            )
+        except requests.exceptions.Timeout:
+            print("[ERROR] Gemini API request timed out.")
+            return jsonify({"error": "Image generation timed out. Please try again."}), 504
+        except requests.exceptions.ConnectionError as ce:
+            print(f"[ERROR] Connection reset or dropped: {ce}")
+            return jsonify({"error": "Connection to image generator lost. Try again."}), 502
+        except Exception as e:
+            print(f"[ERROR] Unexpected network error: {e}")
+            return jsonify({"error": f"Network error: {str(e)}"}), 500
+
+        # ✅ Handle Gemini response
         if response.status_code != 200:
-            print(f"[ERROR] Gemini API Error: {response.text}")
+            print(f"[ERROR] Gemini API Error {response.status_code}: {response.text}")
             return jsonify({"error": f"Gemini API returned {response.status_code}", "details": response.text}), response.status_code
 
         result = response.json()
-        
+
+        # Safety check
         if "promptFeedback" in result:
-             print(f"[WARN] Gemini returned promptFeedback: {result['promptFeedback']}")
-             block_reason = result.get("promptFeedback", {}).get("blockReason", "Unknown")
-             if block_reason != "SAFETY": # Don't error on non-safety blocks if candidates exist
-                pass
-             elif not result.get("candidates"):
-                return jsonify({"error": f"Generation failed due to safety settings: {block_reason}"}), 400
+            print(f"[WARN] Gemini promptFeedback: {result['promptFeedback']}")
+            block_reason = result.get("promptFeedback", {}).get("blockReason", "Unknown")
+            if block_reason == "SAFETY" and not result.get("candidates"):
+                return jsonify({"error": f"Blocked by safety filter: {block_reason}"}), 400
 
         candidates = result.get("candidates", [])
         if not candidates:
-            print("[WARN] Gemini returned no candidates. Check promptFeedback.")
             feedback = result.get("promptFeedback", "No feedback")
-            return jsonify({"error": "No output from Gemini. Generation may have been blocked.", "details": feedback}), 400
+            print("[WARN] Gemini returned no candidates.")
+            return jsonify({"error": "No output from Gemini", "details": feedback}), 400
 
         parts = candidates[0].get("content", {}).get("parts", [])
         gen_b64 = None
@@ -561,29 +651,50 @@ def generate_image():
             if "inline_data" in part:
                 gen_b64 = part["inline_data"]["data"]
                 break
-            elif "inlineData" in part: # Handle camelCase variation
+            elif "inlineData" in part:
                 gen_b64 = part["inlineData"]["data"]
                 break
 
         if not gen_b64:
-            print("[WARN] Gemini returned no image data.")
             return jsonify({"error": "Gemini returned no image data"}), 400
 
-        # --- 7. Save file (same as before, but with theme in name) ---
-        generated_filename = f"gen_{int(time.time())}_{theme}.jpg"
+        # Save generated image
+        generated_filename = f"gen_{int(time.time())}_{secure_filename(theme)}.jpg"
         generated_path = os.path.join(app.config['GENERATED_FOLDER'], generated_filename)
         with open(generated_path, "wb") as f:
             f.write(base64.b64decode(gen_b64))
 
-        print(f"[INFO] Generation complete: {generated_filename}")
+        generated_url = f"/generated/{generated_filename}"
+
+        # Update credits + history safely
+        current_user.credits -= IMAGE_COST
+        history_title = f"{theme.title()} ({look.title()})"
+        new_history_item = SearchHistory(
+            title=history_title,
+            prompt_content=prompt,
+            generated_result=generated_url,
+            user_id=current_user.id
+        )
+        db.session.add(new_history_item)
+        db.session.commit()
+
+        print(f"[INFO] Generation complete for {current_user.username}: {generated_filename} (Credits left: {current_user.credits})")
+
         return jsonify({
             "message": "Image generated successfully",
-            "generated_image_url": f"/generated/{generated_filename}" # Relative to backend
+            "generated_image_url": generated_url,
+            "new_credit_count": current_user.credits
         }), 200
 
     except Exception as e:
         print(f"[ERROR] Generation failed: {e}")
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
+#
+# -----------------------------------------------------------------------
+# 👆👆👆 END OF MODIFIED SECTION 👆👆👆
+# -----------------------------------------------------------------------
+#
 
 # ------------------------------------------------------
 # 🗂 [NEW/MERGED] Serve Uploaded and Generated Files
@@ -606,10 +717,6 @@ if __name__ == "__main__":
         db.create_all()
         print("Database ready.")
     port = int(os.environ.get("PORT", 5000))
-    # Note: app.run() is fine for Render's environment, but gunicorn is preferred.
-    # Since your working example uses this, we will keep it.
-    app.run(host="0.0.0.0", port=port)
-
-
+    app.run(host="0.0.0.0", port=port, debug=True)
 
 
