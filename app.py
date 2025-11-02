@@ -94,6 +94,8 @@ db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 
+with app.app_context():
+    db.create_all()
 # ------------------------
 # ✅ [MERGED] Style Prompts (from your original app)
 # ------------------------
@@ -718,5 +720,6 @@ if __name__ == "__main__":
         print("Database ready.")
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
