@@ -39,10 +39,14 @@ def get_jwt_identity_optional():
 app = Flask(__name__)
 
 # [FIXED] Updated CORS setup to explicitly allow Authorization headers
-CORS(app, 
-    supports_credentials=True, 
-    origins=["http://127.0.0.1:5500", "http://localhost:5000"], # <-- CHANGED THIS LINE
-    allow_headers=["Content-Type", "Authorization"], 
+CORS(app,
+    supports_credentials=True,
+    origins=[
+        "http://127.0.0.1:5500",
+        "http://localhost:5000",
+        "https://content-creator-assistance.onrender.com"  # ✅ add your actual Render frontend URL
+    ],
+    allow_headers=["Content-Type", "Authorization"],
     expose_headers=["Authorization"]
 )
 
@@ -50,7 +54,7 @@ CORS(app,
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "fallback_secret_key_123")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=3)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///users.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:////data/users.db"
 app.config["JWT_SECRET_KEY"] = "super-secret-key"
 # --- [MERGED] Folder Configuration (from Image App) ---
 UPLOAD_FOLDER = 'uploads'
@@ -294,6 +298,11 @@ def user_lookup_callback(_jwt_header, jwt_data):
 
 
 number = ''
+@app.before_request
+def preserve_authorization_header():
+    if "Authorization" not in request.headers and "HTTP_AUTHORIZATION" in request.environ:
+        request.headers = dict(request.headers)
+        request.headers["Authorization"] = request.environ["HTTP_AUTHORIZATION"]
 
 # ------------------------
 # ✅ Home Route
@@ -445,18 +454,6 @@ def login():
         'access_token': token
         }), 200
 # --- [MODIFIED] Endpoint to get current user info (sends credits) ---
-@app.route("/auth/me", methods=["GET"])
-@jwt_required()
-def get_me():
-    user = get_current_user()
-    print(f"[INFO] /auth/me requested for: {user}")
-    return jsonify({
-        "id": user.id,
-        "email": user.username,
-        "plan": user.plan,
-        "credits": user.credits
-    }), 200
-# -----------------------------------------------
 
 
 # ------------------------
@@ -720,6 +717,7 @@ if __name__ == "__main__":
         print("Database ready.")
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
