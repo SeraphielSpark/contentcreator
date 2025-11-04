@@ -77,22 +77,21 @@ print(f"[INFO] Database path: {app.config['SQLALCHEMY_DATABASE_URI']}")
 # ✅ Google API Configuration
 # ------------------------
 # [MODIFIED] Using updated environment variable name
-GEMINI_API_KEY = os.environ.get("GEMINI") 
-if not GEMINI_API_KEY:
+GEMINI_API_KEY1 = os.environ.get("AI") 
+if not GEMINI_API_KEY1:
     # This error will still appear until you set it in your Render environment
     print("[FATAL ERROR] GEMINI_API_KEY is not set.")
 
 # --- 1. Client for Text Generation ---
 try:
     # This requires an updated 'google-generativeai' library
-    genai.configure(api_key=GEMINI_API_KEY)
-    text_model = genai.GenerativeModel('gemini-1.5-flash')
+    genai.configure(api_key=GEMINI_API_KEY1)
+    text_model1 = genai.GenerativeModel('gemini-1.5-flash')
     print("[INFO] Google GenAI SDK (for Text) initialized.")
 except Exception as e:
     # This will catch the 'has no attribute configure' error if library is old
     print(f"[ERROR] Failed to initialize Google GenAI client: {e}")
-    text_model = None
-
+    text_model1 = None
 # --- 2. REST API URL for Image Generation ---
 MODEL_NAME = "gemini-2.5-flash-image" 
 # [MODIFIED] Using updated environment variable name
@@ -401,10 +400,10 @@ def respond():
     """
 
     try:
-        if not text_model:
+        if not text_model1:
              return jsonify({"error": "Google AI client not initialized. Check API Key."}), 500
         
-        response = text_model.generate_content(chat_prompt)
+        response = text_model1.generate_content(chat_prompt)
         result = response.text.strip() if hasattr(response, "text") else "No response text received."
         return jsonify({"result": result})
     except Exception as e:
@@ -768,6 +767,7 @@ if __name__ == "__main__":
     # Use 0.0.0.0 to be accessible externally (like Gunicorn does)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
