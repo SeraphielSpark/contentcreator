@@ -77,28 +77,16 @@ print(f"[INFO] Database path: {app.config['SQLALCHEMY_DATABASE_URI']}")
 # ✅ Google API Configuration
 # ------------------------
 # [MODIFIED] Using updated environment variable name
-GOOGLE_API_KEY1 = os.environ.get("GEMINI")
-if not GOOGLE_API_KEY1:
-    # This error will still appear until you set it in your Render environment
-    print("[FATAL ERROR] GEMINI_API_KEY is not set.")
-
-# --- 1. Client for Text Generation ---
-try:
-    # This requires an updated 'google-generativeai' library
-    genai.configure(api_key=GOOGLE_API_KEY1)
-    text_model1 = genai.GenerativeModel('gemini-1.5-flash')
-    print("[INFO] Google GenAI SDK (for Text) initialized.")
-except Exception as e:
-    # This will catch the 'has no attribute configure' error if library is old
-    print(f"[ERROR] Failed to initialize Google GenAI client: {e}")
-    text_model1 = None
+#GOOGLE_API_KEY1 = os.environ.get("GEMINI")
+API_KEY = os.environ.get("GEMINI")
+client = genai.Client(api_key=API_KEY)
 # --- 2. REST API URL for Image Generation ---
 MODEL_NAME = "gemini-2.5-flash-image" 
 # [MODIFIED] Using updated environment variable name
-if not GOOGLE_API_KEY1:
+if not API_KEY:
     print("[FATAL ERROR] GEMINI (for Image API) is not set.")
 
-API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={GOOGLE_API_KEY1}"
+API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={API_KEY}"
 print(f"[INFO] Image API (REST) endpoint set for model: {MODEL_NAME}")
 
 
@@ -344,38 +332,21 @@ def home():
 # ------------------------
 @app.route("/generate", methods=["POST"])
 def generate():
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Request must be JSON"}), 400
+    data = request.get_json(silent=True) or {}
+    content = (data.get("content") or "").strip()
+    if not content:
+        return jsonify(error="Content required"), 400
 
-    post_content = data.get("post", "")
-    if not post_content:
-        return jsonify({"error": "No post content provided"}), 400
-
-    prompt = f"""
-    You are an expert social media strategist.
-    The user provided this post caption: "{post_content}"
-    Your task:
-    1. Keep the user's caption exactly as it is.
-    2. Add a new line and generate ONLY 7–10 trending, SEO-optimized hashtags.
-    3. Make hashtags aesthetic and relevant.
-    Format:
-    [Original caption]
-
-    [Hashtags]
-    """
-
+    prompt = f'Extract 7 SEO hashtags from: "{content}"\nReturn only tags, comma-separated.'
     try:
-        if not text_model1:
-             return jsonify({"error": "Google AI client not initialized. Check API Key."}), 500
-        
-        response = text_model1.generate_content(prompt)
-        result = response.text.strip() if hasattr(response, "text") else "No response text received."
-        return jsonify({"result": result})
+        rsp = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
+        text = rsp.text.strip() if rsp.text else ""
     except Exception as e:
-        print(f"[ERROR] /generate: {e}")
-        return jsonify({"error": str(e)}), 500
+        print("Gemini error:", e)
+        return jsonify(error="Gen failed"), 500
 
+    hashtags = [t.strip() for t in text.split(",") if t.strip().startswith("#")]
+    return jsonify(hashtags=hashtags)
 
 # ------------------------
 # ✅ Chat Response Route
@@ -397,13 +368,9 @@ def respond():
 
     Give a concise, practical answer tailored for content creators.
     """
-
     try:
-        if not text_model1:
-             return jsonify({"error": "Google AI client not initialized. Check API Key."}), 500
-        
-        response = text_model1.generate_content(chat_prompt)
-        result = response.text.strip() if hasattr(response, "text") else "No response text received."
+        response = client.models.generate_content(model="gemini-1.5-flash", contents=chat_prompt)
+        result = response.text.strip() if rsp.text else ""
         return jsonify({"result": result})
     except Exception as e:
         print(f"[ERROR] /respond: {e}")
@@ -766,6 +733,7 @@ if __name__ == "__main__":
     # Use 0.0.0.0 to be accessible externally (like Gunicorn does)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
