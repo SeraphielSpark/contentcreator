@@ -85,7 +85,7 @@ if not GOOGLE_API_KEY:
 # --- 1. Client for Text Generation ---
 try:
     # This requires an updated 'google-generativeai' library
-    genai.configure(api_key=GEMINI_API_KEY)
+    genai.configure(api_key=GOOGLE_API_KEY)
     text_model = genai.GenerativeModel('gemini-1.5-flash')
     print("[INFO] Google GenAI SDK (for Text) initialized.")
 except Exception as e:
@@ -768,5 +768,6 @@ if __name__ == "__main__":
     # Use 0.0.0.0 to be accessible externally (like Gunicorn does)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
