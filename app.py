@@ -77,7 +77,7 @@ print(f"[INFO] Database path: {app.config['SQLALCHEMY_DATABASE_URI']}")
 # ✅ Google API Configuration
 # ------------------------
 # [MODIFIED] Using updated environment variable name
-GOOGLE_API_KEY = os.environ.get("GEMINI_API_KEY") 
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") 
 if not GOOGLE_API_KEY:
     # This error will still appear until you set it in your Render environment
     print("[FATAL ERROR] GEMINI_API_KEY is not set.")
@@ -85,7 +85,7 @@ if not GOOGLE_API_KEY:
 # --- 1. Client for Text Generation ---
 try:
     # This requires an updated 'google-generativeai' library
-    genai.configure(api_key=GOOGLE_API_KEY)
+    genai.configure(api_key=GEMINI_API_KEY)
     text_model = genai.GenerativeModel('gemini-1.5-flash')
     print("[INFO] Google GenAI SDK (for Text) initialized.")
 except Exception as e:
@@ -768,6 +768,7 @@ if __name__ == "__main__":
     # Use 0.0.0.0 to be accessible externally (like Gunicorn does)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
