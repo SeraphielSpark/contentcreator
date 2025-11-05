@@ -330,24 +330,77 @@ def home():
 # ------------------------
 # ✅ Hashtag Generator Route
 # ------------------------
+There is a **mismatch** between your frontend and backend code, and you are still using the incorrect model name.
+
+This will cause your code to fail.
+
+1.  **The Mismatch:** Your frontend is sending `{"post": ...}`, but your backend is looking for `data.get("content")`. The backend will find nothing and return a 400 error.
+2.  **The Model:** You are using `gemini-1.5-flash`, which caused the 404 error. You must use `gemini-2.5-flash`.
+
+-----
+
+### ✅ The Solution
+
+Here is the corrected backend code. I have fixed both problems and improved the prompt to use the system instruction you wanted.
+
+**Replace your `/generate` route with this:**
+
+```python
 @app.route("/generate", methods=["POST"])
 def generate():
     data = request.get_json(silent=True) or {}
-    content = (data.get("content") or "").strip()
+    
+    # --- [FIX 1] ---
+    # Look for "post" to match your frontend
+    content = (data.get("post") or "").strip() 
+    # --- [END FIX 1] ---
+    
     if not content:
-        return jsonify(error="Content required"), 400
+        return jsonify(error="Content required (must be sent as 'post')"), 400
 
-    prompt = f'Extract 7 SEO hashtags from: "{content}"\nReturn only tags, comma-separated.'
+    # --- [FIX 2] ---
+    # Separated prompts for the new client method
+    system_prompt = (
+        "You are an expert social media strategist.\n"
+        "Your task is to extract exactly 7 SEO-optimized hashtags from the user's content.\n"
+        "RULES:\n"
+        "1. Return ONLY the hashtags.\n"
+        "2. Each hashtag must start with a #.\n"
+        "3. Separate each hashtag with a comma.\n"
+        "4. Do not include any other text, titles, or explanations."
+    )
+    user_prompt = f"Here is the content: \"{content}\""
+    # --- [END FIX 2] ---
+
     try:
-        rsp = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
+        # --- [FIX 3] ---
+        # Use the correct model name and the new config
+        rsp = client.models.generate_content(
+            model="gemini-2.5-flash",  # <-- Correct model
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt
+            ),
+            contents=user_prompt
+        )
+        # --- [END FIX 3] ---
+        
         text = rsp.text.strip() if rsp.text else ""
+
     except Exception as e:
         print("Gemini error:", e)
-        return jsonify(error="Gen failed"), 500
+        # Pass the Google error to the frontend
+        return jsonify(error=f"Gen failed: {str(e)}"), 500
 
+    # This parsing logic is good and now matches the prompt
     hashtags = [t.strip() for t in text.split(",") if t.strip().startswith("#")]
-    return jsonify(hashtags=hashtags)
+    
+    if not hashtags:
+        # Handle cases where the model didn't return what we want
+        print(f"Model returned unexpected text: {text}")
+        return jsonify(error="Failed to parse hashtags from model response", model_output=text), 500
 
+    return jsonify(hashtags=hashtags)
+```
 # ------------------------
 # ✅ Chat Response Route
 # ------------------------
@@ -369,7 +422,7 @@ def respond():
     Give a concise, practical answer tailored for content creators.
     """
     try:
-        response = client.models.generate_content(model="gemini-1.5-flash", contents=chat_prompt)
+        response = client.models.generate_content(model="gemini-2.5-flash", contents=chat_prompt)
         result = response.text.strip() if rsp.text else ""
         return jsonify({"result": result})
     except Exception as e:
@@ -733,6 +786,7 @@ if __name__ == "__main__":
     # Use 0.0.0.0 to be accessible externally (like Gunicorn does)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
