@@ -330,22 +330,6 @@ def home():
 # ------------------------
 # ✅ Hashtag Generator Route
 # ------------------------
-There is a **mismatch** between your frontend and backend code, and you are still using the incorrect model name.
-
-This will cause your code to fail.
-
-1.  **The Mismatch:** Your frontend is sending `{"post": ...}`, but your backend is looking for `data.get("content")`. The backend will find nothing and return a 400 error.
-2.  **The Model:** You are using `gemini-1.5-flash`, which caused the 404 error. You must use `gemini-2.5-flash`.
-
------
-
-### ✅ The Solution
-
-Here is the corrected backend code. I have fixed both problems and improved the prompt to use the system instruction you wanted.
-
-**Replace your `/generate` route with this:**
-
-```python
 @app.route("/generate", methods=["POST"])
 def generate():
     data = request.get_json(silent=True) or {}
@@ -786,6 +770,7 @@ if __name__ == "__main__":
     # Use 0.0.0.0 to be accessible externally (like Gunicorn does)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
