@@ -384,7 +384,6 @@ def generate():
         return jsonify(error="Failed to parse hashtags from model response", model_output=text), 500
 
     return jsonify(hashtags=hashtags)
-```
 # ------------------------
 # ✅ Chat Response Route
 # ------------------------
@@ -770,6 +769,7 @@ if __name__ == "__main__":
     # Use 0.0.0.0 to be accessible externally (like Gunicorn does)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
