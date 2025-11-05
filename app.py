@@ -9,6 +9,7 @@ from flask import Flask, request, jsonify, send_from_directory
 # Note: Ensure 'google.genai' is updated in your requirements.txt
 # (as 'google-generativeai') to fix the 'no attribute configure' error.
 from google import genai 
+from google.genai import types  # <--- ADD THIS LINE
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
@@ -406,7 +407,7 @@ def respond():
     """
     try:
         response = client.models.generate_content(model="gemini-2.5-flash", contents=chat_prompt)
-        result = response.text.strip() if rsp.text else ""
+        result = response.text.strip() if response.text else ""
         return jsonify({"result": result})
     except Exception as e:
         print(f"[ERROR] /respond: {e}")
@@ -769,6 +770,7 @@ if __name__ == "__main__":
     # Use 0.0.0.0 to be accessible externally (like Gunicorn does)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
