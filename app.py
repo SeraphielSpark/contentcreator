@@ -335,40 +335,49 @@ def home():
 def generate():
     data = request.get_json(silent=True) or {}
     
-    # --- [FIX 1] ---
-    # Look for "post" to match your frontend
-    content = (data.get("post") or "").strip() 
-    # --- [END FIX 1] ---
-    
+    # FIX 1 — Match frontend param "post"
+    content = (data.get("post") or "").strip()
+
     if not content:
         return jsonify(error="Content required (must be sent as 'post')"), 400
 
-    # --- [FIX 2] ---
-    # Separated prompts for the new client method
-    chat_prompt = (f'''
+    # FIX 2 — Clean prompt (must be a normal string, not broken f-string)
+    chat_prompt = (
         "You are an expert social media strategist.\n"
-        "Your task is to extract exactly 7 SEO-optimized hashtags for the user which is "{content}" .\n"
+        f"Your task is to extract exactly 7 SEO-optimized hashtags for: \"{content}\".\n"
         "RULES:\n"
         "1. Return ONLY the hashtags.\n"
         "2. Each hashtag must start with a #.\n"
         "3. Separate each hashtag with a comma.\n"
-        "4. Do not include any other text, titles, or explanations."
-        '''
+        "4. Do not include any other text, titles, or explanations.\n"
     )
-    # --- [END FIX 2] ---
 
     try:
-        # --- [FIX 3] ---
-        response = client.models.generate_content(model="gemini-2.5-flash", contents=chat_prompt)
-        result = response.text.strip() if response.text else ""
-        hashtags = [t.strip() for t in result.split(",") if t.strip().startswith("#")]
+        # FIX 3 — Correct Gemini method & structure
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=chat_prompt
+        )
+
+        model_output = response.text.strip() if response.text else ""
+
+        # Parse only valid hashtags
+        hashtags = [
+            h.strip() for h in model_output.split(",")
+            if h.strip().startswith("#")
+        ]
+
         if not hashtags:
-            # Handle cases where the model didn't return what we want
-            print(f"Model returned unexpected text: {text}")
-            return jsonify(error="Failed to parse hashtags from model response", model_output=text), 500
+            print(f"Model returned unexpected output: {model_output}")
+            return jsonify(
+                error="Failed to parse hashtags from model response",
+                model_output=model_output
+            ), 500
+
         return jsonify(hashtags=hashtags)
+
     except Exception as e:
-        print(f"[ERROR] /respond: {e}")
+        print(f"[ERROR] /generate: {e}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -758,3 +767,4 @@ if __name__ == "__main__":
     # Use 0.0.0.0 to be accessible externally (like Gunicorn does)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
