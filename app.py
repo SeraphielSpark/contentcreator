@@ -361,16 +361,18 @@ def generate():
         # --- [FIX 3] ---
         response = client.models.generate_content(model="gemini-2.5-flash", contents=chat_prompt)
         result = response.text.strip() if response.text else ""
-        
-    # This parsing logic is good and now matches the prompt
-    hashtags = [t.strip() for t in result.split(",") if t.strip().startswith("#")]
-    
-    if not hashtags:
-        # Handle cases where the model didn't return what we want
-        print(f"Model returned unexpected text: {text}")
-        return jsonify(error="Failed to parse hashtags from model response", model_output=text), 500
+        hashtags = [t.strip() for t in result.split(",") if t.strip().startswith("#")]
+        if not hashtags:
+            # Handle cases where the model didn't return what we want
+            print(f"Model returned unexpected text: {text}")
+            return jsonify(error="Failed to parse hashtags from model response", model_output=text), 500
+        return jsonify(hashtags=hashtags)
+    except Exception as e:
+        print(f"[ERROR] /respond: {e}")
+        return jsonify({"error": str(e)}), 500
 
-    return jsonify(hashtags=hashtags)
+
+
 # ------------------------
 # ✅ Chat Response Route
 # ------------------------
@@ -756,17 +758,3 @@ if __name__ == "__main__":
     # Use 0.0.0.0 to be accessible externally (like Gunicorn does)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
