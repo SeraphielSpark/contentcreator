@@ -8,3 +8,5 @@ requests
 Pillow
 google-genai
 gunicorn
+Flask-Mail
+authlib
