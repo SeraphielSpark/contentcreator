@@ -4,12 +4,11 @@ import time
 import uuid
 import base64
 import requests
+import json
+import random # [NEW] For OTP generation
 from PIL import Image
-from flask import Flask, request, jsonify, send_from_directory
-# Note: Ensure 'google.genai' is updated in your requirements.txt
-# (as 'google-generativeai') to fix the 'no attribute configure' error.
-from google import genai 
-from google.genai import types  # <--- ADD THIS LINE
+from flask import Flask, request, jsonify, send_from_directory, redirect, url_for, render_template_string
+from google import genai
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
@@ -18,16 +17,17 @@ from flask_jwt_extended import (
     get_jwt_identity,
     jwt_required,
     JWTManager,
-    verify_jwt_in_request,
-    get_current_user
+    verify_jwt_in_request
 )
 from flask_jwt_extended.exceptions import NoAuthorizationError
-from jwt import ExpiredSignatureError
+from jwt import ExpiredSignatureError, decode
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
+from authlib.integrations.flask_client import OAuth
+from flask_mail import Mail, Message
 
 # ------------------------
-# ✅ Helper for optional JWT
+# Helper for optional JWT
 # ------------------------
 def get_jwt_identity_optional():
     try:
@@ -37,11 +37,9 @@ def get_jwt_identity_optional():
         return None
 
 # ------------------------
-# ✅ Flask App Setup
+# Flask App Setup
 # ------------------------
 app = Flask(__name__)
-
-# Updated CORS setup
 CORS(app,
      resources={r"/*": {"origins": ["*"]}},
      supports_credentials=True,
@@ -54,223 +52,97 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "fallback_secret_key_123
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=3)
 app.config["JWT_SECRET_KEY"] = "super-secret-key"
+app.config["FRONTEND_URL"] ='http://127.0.0.1:5500' #os.environ.get("FRONTEND_URL", "http://127.0.0.1:5500")
+
+# --- Email Configuration ---
+app.config['MAIL_SERVER'] ='smtp.googlemail.com' #os.environ.get('MAIL_SERVER', 'smtp.googlemail.com')
+app.config['MAIL_PORT'] =int(587) #int(os.environ.get('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] ='true' # os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
+app.config['MAIL_USERNAME'] = 'taiwoemmanuel435@gmail.com'#os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] ='cofdyuhubuwvfibh' #os.environ.get('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', app.config.get('MAIL_USERNAME'))
 
 # --- Folder Configuration ---
 UPLOAD_FOLDER = 'uploads'
 GENERATED_FOLDER = 'generated'
 app.config['UPLOAD_FOLDER'] = os.path.abspath(UPLOAD_FOLDER)
 app.config['GENERATED_FOLDER'] = os.path.abspath(GENERATED_FOLDER)
-
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['GENERATED_FOLDER'], exist_ok=True)
 
-print(f"[INFO] Upload folder: {app.config['UPLOAD_FOLDER']}")
-print(f"[INFO] Generated folder: {app.config['GENERATED_FOLDER']}")
-
-# --- Database Path ---
-# Using /tmp for compatibility with read-only filesystems like Render
+# --- Database Path (Local Dev) ---
+basedir = os.path.abspath(os.path.dirname(__file__))
 db_path = os.path.join("/tmp", "app.db")
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
 print(f"[INFO] Database path: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
+# ------------------------
+# Google API Configuration
+# ------------------------
+GOOGLE_API_KEY = os.environ.get("GEMINI_API_KEY") 
+if not GOOGLE_API_KEY:
+    print("[FATAL ERROR] GEMINI_API_KEY is not set.")
+try:
+    genai.configure(api_key=GOOGLE_API_KEY)
+    text_model = genai.GenerativeModel('gemini-1.5-flash')
+    print("[INFO] Google GenAI SDK (for Text) initialized.")
+except Exception as e:
+    print(f"[ERROR] Failed to initialize Google GenAI client: {e}")
+    text_model = None
 
-# ------------------------
-# ✅ Google API Configuration
-# ------------------------
-# [MODIFIED] Using updated environment variable name
-#GOOGLE_API_KEY1 = os.environ.get("GEMINI")
-API_KEY = os.environ.get("GEMINI")
-client = genai.Client(api_key=API_KEY)
-# --- 2. REST API URL for Image Generation ---
 MODEL_NAME = "gemini-2.5-flash-image" 
-# [MODIFIED] Using updated environment variable name
-if not API_KEY:
+GOOGLE_API_KEY1 = os.environ.get("GEMINI")
+if not GOOGLE_API_KEY1:
     print("[FATAL ERROR] GEMINI (for Image API) is not set.")
-
-API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={API_KEY}"
-print(f"[INFO] Image API (REST) endpoint set for model: {MODEL_NAME}")
-
+API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={GOOGLE_API_KEY1}"
 
 # ------------------------
-# ✅ Database Setup
+# Database & Add-on Setup
 # ------------------------
-
+db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
+mail = Mail(app)
+oauth = OAuth(app)
 
-# ✅✅✅ --- FIX --- ✅✅✅
-# Initialize SQLAlchemy *after* app config is set
-db = SQLAlchemy(app)
-# ✅✅✅ ----------- ✅✅✅
-
-
-# ------------------------
-# ✅ [MERGED] Style Prompts (Keeping for legacy/reference)
-# ------------------------
-STYLE_PROMPTS = {
-    # ... (Your "restore", "cinematic", "portrait", etc. prompts are all still here) ...
-    "restore": {
-        "artist_style": "a world-class forensic photo restoration specialist and lead digital conservator",
-        "style_description": (
-            "This is a professional, high-fidelity restoration job, NOT an artistic recreation. "
-            "Your primary goal is to enhance and repair the original image to its pristine state. "
-            "ABSOLUTELY NO artistic changes are permitted. DO NOT alter the subject's original face, features, "
-            "pose, clothing, body shape, or physical attributes. DO NOT add, remove, or change objects in the background. "
-            "Your tasks are strictly technical: Meticulously remove all visual artifacts, including scratches, "
-            "dust, creases, tears, water stains, and severe film grain. Correct severe color casts, "
-            "restore faded, washed-out colors to their original vibrancy, and perfectly balance the histogram. "
-            "Recover all clipped highlights and crushed shadows to reveal lost detail. "
-            "Finally, intelligently sharpen the entire image to a modern 4K or 8K clarity, as if it were a new digital scan "
-            "from the original, undamaged film negative. The final image must be a perfect, clean master of the original photo."
-        )
-    },
-    
-    "cinematic": {
-        "artist_style": "an award-winning cinematic director and Director of Photography, in the style of Roger Deakins or Denis Villeneuve",
-        "style_description": (
-            "A breathtaking 16:9 anamorphic film still, captured on a Panavision lens with subtle, realistic lens flare. "
-            "Features professional 8K resolution, volumetric 'god ray' lighting cutting through a hazy, atmospheric scene. "
-            "Apply a sophisticated cinematic color grade (moody teal-orange or desaturated noir). "
-            "The composition must be meticulous, with deep, rich shadows, perfectly controlled highlights, and a light, realistic film grain "
-            "to simulate an Arri Alexa 65 camera sensor."
-        )
-    },
-    "portrait": {
-        "artist_style": "a world-class editorial portrait photographer, referencing Annie Leibovitz, shooting for a 'Vogue' or 'Vanity Fair' cover",
-        "style_description": (
-            "An ultra-sharp 8K medium-shot studio portrait, captured with a high-end 85mm f/1.2 prime lens. "
-            "Features exceptionally creamy, buttery bokeh and perfect, distinct catchlights in the subject's eyes. "
-            "The lighting is a flawless, flattering softbox setup (like a large octabox) for the key light, with a subtle fill "
-            "from a V-flat to gently lift the shadows. Set against a pristine, minimalist seamless paper background in a neutral grey or pure white. "
-            "Includes subtle, professional-grade skin retouching for a perfect, but natural, finish."
-        )
-    },
-    "anime": {
-        "artist_style": "a lead key animator and art director from a high-budget feature film studio, like MAPPA, Ufotable, or CoMix Wave Films",
-        "style_description": (
-            "A 'sakuga'-quality, high-budget modern anime style, suitable for a blockbuster theatrical release. "
-            "Features a hyper-dynamic composition with crisp, complex, cel-shaded line art and advanced digital compositing. "
-            "The scene is packed with effects: volumetric lighting from the environment, glowing magical particle effects, "
-            "and cinematic lens flares. The character must have highly expressive, intricately detailed eyes. "
-            "The background must be a painterly, highly detailed cinematic matte painting, not a simple gradient."
-        )
-    },
-    "fantasy": {
-        "artist_style": "a legendary fantasy illustrator and senior concept artist, blending the styles of Frank Frazetta and 'Elden Ring' art direction",
-        "style_description": (
-            "An epic, painterly, and hyper-detailed fantasy portrait with dynamic, visible brushstrokes. "
-            "The subject is captured in a dynamic, heroic pose, adorned with intricate, battle-worn, glowing armor and mythical artifacts. "
-            "The scene is lit with dramatic chiaroscurp and powerful volumetric god-rays, which illuminate swirling "
-            "magical particle effects and atmospheric fog. The background is a vast, mythical landscape with "
-            "a strong sense of atmospheric perspective and epic scale."
-        )
-    },
-    "realistic": {
-        "artist_style": "a master of hyperrealistic technical photography, using a Phase One medium format 150MP camera system",
-        "style_description": (
-            "An 8K, hyperrealistic photograph, absolutely indistinguishable from reality. "
-            "Shot with a macro-level prime lens to capture every single pore, fiber, and skin texture with flawless, critical "
-            "edge-to-edge sharpness. Lit with flawless, clinical, and perfectly color-balanced (5600K) studio lighting. "
-            "Must have perfect color rendition, zero digital noise, zero film grain, and absolutely no artistic filters. "
-            "The final output must be pure, sharp, unadulterated reality."
-        )
-    },
-    "vintage": {
-        "artist_style": "a master 1950s photojournalist using a classic Rolleiflex or Leica M3 camera",
-        "style_description": (
-            "An authentic 1950s vintage photograph, perfectly simulating aged Kodachrome or Agfa film stock. "
-            "Features a beautifully desaturated, slightly warm, sepia-toned color palette with faded colors. "
-            "The image must have heavy but natural-looking film grain, soft focus (not motion blur), and "
-            "authentic optical imperfections like vignetting and subtle, accidental light leaks. "
-            "Lighting should appear to be from a single, on-camera harsh flashbulb, creating distinct, hard shadows."
-        )
-    },
-    "dreamy": {
-        "artist_style": "an ethereal and dreamy aesthetic photographer, master of soft-focus and 'bloom' lighting",
-        "style_description": (
-            "A surreal, dreamlike portrait defined by an angelic, glowing 'bloom' effect. "
-            "Features extremely soft, diffused lighting, as if shot through a heavy mist filter or Vaseline on the lens. "
-            "Highlights are intentionally overexposed, glowing, and bleeding into the midtones. "
-            "The color palette is restricted to soft pastels and heavily desaturated tones. "
-            "The scene is filled with a gentle, hazy fog and noticeable chromatic aberration for a surreal, otherworldly, and magical feel."
-        )
-    },
-    "moody": {
-        "artist_style": "a moody, atmospheric film noir director, mastering low-key and expressive Rembrandt lighting",
-        "style_description": (
-            "A dark, emotional, and highly atmospheric studio portrait in a classic film noir style. "
-            "Lit with dramatic low-key or Rembrandt lighting (a single, hard, directional source) to create "
-            "intense chiaroscuro—a battle between deep, crushed black shadows and stark, bright highlights. "
-            "The image is heavily desaturated, high-contrast, and evokes a palpable, somber, and deeply cinematic atmosphere. "
-            "Focus on the texture and form revealed by the single light source."
-        )
-    },
-    "neon": {
-        "artist_style": "a high-fashion cyberpunk and neon-noir photographer, shooting a 'Blade Runner' themed editorial for 'Dazed' magazine",
-        "style_description": (
-            "A high-fashion studio shoot, lit *only* by vibrant, saturated, and flickering neon lights. "
-            "The aesthetic is pure cyberpunk-noir, with a dominant pink, cyan, and purple color palette. "
-            "Features wet, reflective surfaces (like a rain-slicked floor) that mirror the lights. "
-            "The subject's skin and high-fashion clothing must be catching the glowing, colored highlights. "
-            "Use deep shadows and include anamorphic lens flares from the neon tubes."
-        )
-    },
-    "default": {
-        "artist_style": "a high-end commercial and e-commerce studio photographer, focused on flawless, clean results for a major brand",
-        "style_description": (
-            "A flawless, high-end commercial studio portrait, perfect for an advertisement or product catalog. "
-            "Lit with a perfect, even, shadowless 3-point lighting setup (large softbox key, fill light, and subtle rim light). "
-            "Set against a perfectly clean, 50% neutral grey seamless paper backdrop. "
-            "The image must be 8K, ultra-high resolution, with crystal-clear, edge-to-edge focus and perfectly balanced, "
-            "true-to-life colors. Must be commercially viable, pristine, and look professionally retouched."
-        )
-    },
-    "spooky": {
-    "artist_style": "a world-class cinematic horror photographer and visual effects director specializing in realistic Halloween imagery",
-    "style_description": (
-        "A hyper-realistic, cinematic Halloween portrait that transforms the subject into a spooky, haunting, yet believable character. "
-        "Change the subject’s clothing, background, and environment to fully match a Halloween theme (such as witch, vampire, ghost, pumpkin queen, or dark angel), "
-        "but DO NOT alter or distort the subject’s original face, features, or expression — their identity must remain perfectly recognizable. "
-        "Apply detailed, eerie atmospheric lighting (moonlight, fog, candle glow, or flickering shadows) with realistic volumetric effects. "
-        "Use ultra-sharp 8K resolution, professional-grade color grading, and meticulous texture enhancement. "
-        "Backgrounds must be immersive and cinematic — haunted mansions, graveyards, forests, or gothic interiors — all with a photographic level of realism. "
-        "Include subtle motion in hair or clothing for dynamic presence. "
-        "Final output should look like a real Halloween photoshoot captured with a Canon R5 or Arri Alexa camera under dramatic studio lighting. "
-        "Deliver a perfect balance between spooky atmosphere and beautiful realism, ensuring it feels like a luxury Halloween editorial portrait, not a cartoon."
-    )
-},
-}
-
+# Configure Google OAuth
+oauth.register(
+    name='google',
+    client_id= os.environ.get('GOOGLE_CLIENT_ID'),
+    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET'),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'}
+)
 
 # ------------------------
-# ✅ Database Models
+# Database Models
 # ------------------------
-# These models are now defined *after* db = SQLAlchemy(app)
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(255), nullable=False)    
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(255), nullable=True) # Nullable for social
     searches = db.relationship('SearchHistory', backref='author', lazy=True)
+    plan = db.Column(db.String(100), nullable=False, default='free')
+    credits = db.Column(db.Integer, nullable=False, default=200)
     
-    # --- Fields for Credit System ---
-    plan = db.Column(db.String(100), nullable=False, default='free') # e.g., 'free', 'standard'
-    credits = db.Column(db.Integer, nullable=False, default=200) # Start new users with 200 credits
+    is_verified = db.Column(db.Boolean, nullable=False, default=False)
+    oauth_provider = db.Column(db.String(50), nullable=True)
+    oauth_provider_id = db.Column(db.String(200), nullable=True)
     
-    def __repr__(self):
-        # [MODIFIED] Updated to show credits
-        return f"User('{self.username}', Plan: '{self.plan}', Credits: {self.credits})"
+    # [NEW] Fields for OTP verification
+    verification_otp = db.Column(db.String(255), nullable=True) # Will store the HASH
+    otp_expires_at = db.Column(db.DateTime, nullable=True)
 
+    def __repr__(self):
+        return f"User('{self.email}', Provider: {self.oauth_provider}, Verified: {self.is_verified})"
 
 class SearchHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     prompt_content = db.Column(db.Text, nullable=False)
-    generated_result = db.Column(db.Text, nullable=False) # This will store the /generated/ URL
+    generated_result = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-
-    def __repr__(self):
-        return f"SearchHistory('{self.title}', User: {self.user_id})"
 
     def to_dict(self):
         return {
@@ -280,230 +152,344 @@ class SearchHistory(db.Model):
             'generated_result': self.generated_result,
             'timestamp': self.timestamp.isoformat()
         }
-
 # ------------------------
-# ✅ Create Tables
+# Create Tables
 # ------------------------
-# ✅✅✅ --- FIX --- ✅✅✅
-# This is moved to *after* the models (User, SearchHistory) are defined.
 with app.app_context():
     print("[INFO] Initializing database tables...")
     db.create_all()
     print("[INFO] Database tables initialized.")
-# ✅✅✅ ----------- ✅✅✅
-
 
 # ------------------------
-# ✅ JWT Config
+# JWT Config
 # ------------------------
-
-# --- [FIXED] This function has been REMOVED (as in your original) ---
-# @jwt.user_identity_loader
-# ...
-
 @jwt.user_lookup_loader
 def user_lookup_callback(_jwt_header, jwt_data):
     identity = jwt_data["sub"]
     try:
-        # This will now work because User model is defined
         return User.query.get(int(identity))
     except (ValueError, TypeError):
         return None
 
-# This variable 'number' doesn't seem to be used anywhere.
-# It's harmless, but you could remove it.
-number = '' 
-
-@app.before_request
-def preserve_authorization_header():
-    if "Authorization" not in request.headers and "HTTP_AUTHORIZATION" in request.environ:
-        request.headers = dict(request.headers)
-        request.headers["Authorization"] = request.environ["HTTP_AUTHORIZATION"]
-
 # ------------------------
-# ✅ Home Route
+# Home Route
 # ------------------------
 @app.route("/", methods=["GET"])
 def home():
-    return jsonify({"message": "✅ CreatorsAI API (Merged Image & Text) is live!"})
+    return jsonify({"message": "✅ CreatorsAI API is live!"})
 
+# ---------------------------------
+# [NEW] AUTH FLOW: STEP 1 (Send OTP)
+# ---------------------------------
+@app.route("/auth/register/send-otp", methods=["POST"])
+def register_send_otp():
+    data = request.get_json() or {}
+    email = data.get("email")
+    password = data.get("password")
+
+    if not email or not password:
+        return jsonify({"msg": "Email and password are required"}), 400
+
+    user = User.query.filter_by(email=email).first()
+    if user and user.is_verified:
+        return jsonify({"msg": "An account with this email already exists."}), 400
+
+    # Generate 6-digit OTP
+    otp = str(random.randint(100000, 999999))
+    hashed_otp = bcrypt.generate_password_hash(otp).decode("utf-8")
+    otp_expiration = datetime.utcnow() + timedelta(minutes=10) # 10 minute expiry
+    hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
+
+    if user and not user.is_verified:
+        # User exists but is not verified, update their password and resend OTP
+        user.password = hashed_password
+        user.verification_otp = hashed_otp
+        user.otp_expires_at = otp_expiration
+        print(f"[INFO] Resending OTP for unverified user {email}")
+    else:
+        # New user
+        new_user = User(
+            email=email,
+            password=hashed_password,
+            plan="free",
+            credits=200,
+            is_verified=False,
+            verification_otp=hashed_otp,
+            otp_expires_at=otp_expiration
+        )
+        db.session.add(new_user)
+        print(f"[INFO] Creating new unverified user {email}")
+
+    # Send verification email with OTP
+    try:
+        msg = Message(
+            'Your CreatorsAI Verification Code',
+            recipients=[email]
+        )
+        msg.body = f"Welcome to CreatorsAI!\n\nYour verification code is: {otp}\n\nThis code will expire in 10 minutes."
+        mail.send(msg)
+        print(f"[INFO] Sent OTP email to {email}.")
+        
+        db.session.commit()
+        db.session.close()
+        return jsonify({"msg": "OTP sent! Check your email. It will expire in 10 minutes."}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        db.session.close()
+        print(f"[ERROR] Failed to send email: {e}")
+        return jsonify({"msg": "Could not send verification email. Please try again."}), 500
+
+# ------------------------------------
+# [NEW] AUTH FLOW: STEP 2 (Verify OTP)
+# ------------------------------------
+@app.route("/auth/register/verify-otp", methods=["POST"])
+def register_verify_otp():
+    data = request.get_json() or {}
+    email = data.get("email")
+    otp = data.get("otp")
+
+    if not email or not otp:
+        return jsonify({"msg": "Email and OTP are required"}), 400
+
+    user = User.query.filter_by(email=email).first()
+
+    if not user:
+        return jsonify({"msg": "User not found. Please sign up again."}), 404
+    
+    if user.is_verified:
+        return jsonify({"msg": "User is already verified. Please log in."}), 400
+
+    if not user.verification_otp or not user.otp_expires_at:
+        return jsonify({"msg": "No pending verification. Please sign up again."}), 400
+
+    if datetime.utcnow() > user.otp_expires_at:
+        return jsonify({"msg": "Your OTP has expired. Please sign up again to get a new one."}), 401
+        
+    if not bcrypt.check_password_hash(user.verification_otp, otp):
+        return jsonify({"msg": "Invalid OTP."}), 401
+
+    # --- Success! ---
+    user.is_verified = True
+    user.verification_otp = None  # Invalidate OTP
+    user.otp_expires_at = None
+    db.session.commit()
+    
+    # Log the user in by creating a token
+    access_token = create_access_token(identity=str(user.id))
+    
+    user_info = {    
+        "id": user.id,
+        "email": user.email,
+        "plan": user.plan,
+        "credits": user.credits,
+        'access_token': access_token
+    }
+    db.session.close()
+    
+    print(f"[INFO] User {email} verified and logged in.")
+    return jsonify(user_info), 200
+
+# ----------------------------
+# [MODIFIED] Login endpoint
+# ----------------------------
+@app.route("/auth/login", methods=["POST"])
+def login():
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
+
+    user = User.query.filter_by(email=email).first()
+    
+    if not user or not user.password or not bcrypt.check_password_hash(user.password, password):
+        return jsonify({"msg": "Invalid credentials"}), 401
+
+    if not user.is_verified:
+        # TODO: You could add a "resend OTP" button on the frontend
+        return jsonify({"msg": "Please verify your email address before logging in."}), 401
+
+    token = create_access_token(identity=str(user.id))
+    
+    user_info = {    
+        "id": user.id,
+        "email": user.email,
+        "plan": user.plan,
+        "credits": user.credits,
+        'access_token': token
+    }
+    db.session.close()
+    return jsonify(user_info), 200
+
+# ----------------------------
+# [NEW] Social Login Routes
+# ----------------------------
+@app.route('/auth/google/login')
+def google_login():
+    redirect_uri = url_for('google_callback', _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
+@app.route('/auth/google/callback')
+def google_callback():
+    try:
+        token = oauth.google.authorize_access_token()
+        user_info = oauth.google.parse_id_token(token, nonce=None)
+        
+        user_email = user_info['email']
+        user_google_id = user_info['sub']
+
+        user = User.query.filter_by(email=user_email).first()
+
+        if not user:
+            # Case 1: New user via Google
+            user = User(
+                email=user_email,
+                oauth_provider='google',
+                oauth_provider_id=user_google_id,
+                is_verified=True,
+                plan='free',
+                credits=200
+            )
+            db.session.add(user)
+        else:
+            # Case 2: Existing user
+            user.oauth_provider = 'google'
+            user.oauth_provider_id = user_google_id
+            user.is_verified = True
+        
+        db.session.commit()
+        access_token = create_access_token(identity=str(user.id))
+        
+        user_data = {
+            "id": user.id,
+            "email": user.email,
+            "plan": user.plan,
+            "credits": user.credits,
+            'access_token': access_token
+        }
+        
+        popup_response_script = f"""
+        <html>
+        <head>
+          <title>Authenticating...</title>
+          <script>
+            window.opener.postMessage({{
+              type: 'auth_success',
+              payload: {json.dumps(user_data)}
+            }}, '{app.config["FRONTEND_URL"]}');
+            window.close();
+          </script>
+        </head>
+        <body>Success! Redirecting...</body>
+        </html>
+        """
+        return render_template_string(popup_response_script)
+
+    except Exception as e:
+        print(f"[ERROR] Google OAuth failed: {e}")
+        db.session.rollback()
+        popup_error_script = f"""
+        <html>
+        <head>
+          <title>Error</title>
+          <script>
+            window.opener.postMessage({{
+              type: 'auth_error',
+              payload: {{ "msg": "Social login failed. Please try again." }}
+            }}, '{app.config["FRONTEND_URL"]}');
+            window.close();
+          </script>
+        </head>
+        <body>Error. Please try again.</body>
+        </html>
+        """
+        return render_template_string(popup_error_script)
+    finally:
+        db.session.close()
 
 # ------------------------
-# ✅ Hashtag Generator Route
+# All other routes
 # ------------------------
 @app.route("/generate", methods=["POST"])
 def generate():
-    data = request.get_json(silent=True) or {}
-    
-    # FIX 1 — Match frontend param "post"
-    content = (data.get("post") or "").strip()
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request must be JSON"}), 400
+    post_content = data.get("post", "")
+    if not post_content:
+        return jsonify({"error": "No post content provided"}), 400
+    prompt = f"""
+    You are an expert social media strategist.
+    The user provided this post caption: "{post_content}"
+    Your task:
+    1. Keep the user's caption exactly as it is.
+    2. Add a new line and generate ONLY 7–10 trending, SEO-optimized hashtags.
+    3. Make hashtags aesthetic and relevant.
+    Format:
+    [Original caption]
 
-    if not content:
-        return jsonify(error="Content required (must be sent as 'post')"), 400
-
-    # FIX 2 — Clean prompt (must be a normal string, not broken f-string)
-    chat_prompt = (
-        "You are an expert social media strategist.\n"
-        f"Your task is to extract exactly 7 SEO-optimized hashtags for: \"{content}\".\n"
-        "RULES:\n"
-        "1. Return ONLY the hashtags.\n"
-        "2. Each hashtag must start with a #.\n"
-        "3. Separate each hashtag with a comma.\n"
-        "4. Do not include any other text, titles, or explanations.\n"
-    )
-
+    [Hashtags]
+    """
     try:
-        # FIX 3 — Correct Gemini method & structure
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=chat_prompt
-        )
-
-        model_output = response.text.strip() if response.text else ""
-
-        # Parse only valid hashtags
-        hashtags = [
-            h.strip() for h in model_output.split(",")
-            if h.strip().startswith("#")
-        ]
-
-        if not hashtags:
-            print(f"Model returned unexpected output: {model_output}")
-            return jsonify(
-                error="Failed to parse hashtags from model response",
-                model_output=model_output
-            ), 500
-
-        return jsonify(hashtags=hashtags)
-
+        if not text_model:
+            return jsonify({"error": "Google AI client not initialized. Check API Key."}), 500
+        response = text_model.generate_content(prompt)
+        result = response.text.strip() if hasattr(response, "text") else "No response text received."
+        return jsonify({"result": result})
     except Exception as e:
         print(f"[ERROR] /generate: {e}")
         return jsonify({"error": str(e)}), 500
 
-
-
-# ------------------------
-# ✅ Chat Response Route
-# ------------------------
 @app.route("/respond", methods=["POST"])
 def respond():
     data = request.get_json()
     if not data:
         return jsonify({"error": "Request must be JSON"}), 400
-
     prompt_content = data.get("prompt", "")
     if not prompt_content:
         return jsonify({"error": "No prompt content provided"}), 400
-
     chat_prompt = f"""
-    You are CreatorsAI a friendly, insightful assistant for the creator economy.
+    You are CreatorsAI — a friendly, insightful assistant for the creator economy.
     A user asked:
     "{prompt_content}"
 
     Give a concise, practical answer tailored for content creators.
     """
     try:
-        response = client.models.generate_content(model="gemini-2.5-flash", contents=chat_prompt)
-        result = response.text.strip() if response.text else ""
+        if not text_model:
+            return jsonify({"error": "Google AI client not initialized. Check API Key."}), 500
+        response = text_model.generate_content(chat_prompt)
+        result = response.text.strip() if hasattr(response, "text") else "No response text received."
         return jsonify({"result": result})
     except Exception as e:
         print(f"[ERROR] /respond: {e}")
         return jsonify({"error": str(e)}), 500
 
-# ----------------------------
-# Register endpoint
-# ----------------------------
-@app.route("/auth/register", methods=["POST"])
-def register():
-    data = request.get_json() or {}
-
-    username = data.get("email")
-    password = data.get("password")
-
-    if not username or not password:
-        return jsonify({"msg": "Username and password are required"}), 400
-
-    if User.query.filter_by(username=username).first():
-        return jsonify({"msg": "User already exists"}), 400
-
-    hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
-
-    new_user = User(
-        username=username,
-        password=hashed_password,
-        plan="free",
-        credits=200
-    )
-    db.session.add(new_user)
-    db.session.commit()
-
-    token = create_access_token(identity=str(new_user.id))
-    return jsonify({
-        "token": token,
-        "user_id": new_user.id,
-        "username": username
-    }), 201
-
-
-# ----------------------------
-# Login endpoint
-# ----------------------------
-@app.route("/auth/login", methods=["POST"])
-def login():
-    data = request.get_json()
-    username = data.get("email")
-    password = data.get("password")
-
-    user = User.query.filter_by(username=username).first()
-    if not user or not bcrypt.check_password_hash(user.password, password):
-        return jsonify({"msg": "Invalid credentials"}), 401
-
-    token = create_access_token(identity=str(user.id))
-    print(f"[INFO] Login successful for: {user.username} (Credits: {user.credits})")
-    
-    # Create user info object *before* closing session
-    user_info = {       
-        "id": user.id,
-        "email": user.username,
-        "plan": user.plan,
-        "credits": user.credits, # Send the actual current credits
-        "point": user.credits,   # 'point' seems redundant, but keeping your structure
-        'access_token': token
-    }
-    
-    db.session.close() # Good practice
-    
-    print(f"[INFO] Returning user info: {user_info}")
-    return jsonify(user_info), 200
-
-
-# ------------------------
-# ✅ User History Routes
-# ------------------------
 @app.route("/api/history", methods=["POST"])
 @jwt_required()
 def save_history():
     user_id = get_jwt_identity()
+    user = db.session.get(User, int(user_id))
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+        
     data = request.get_json()
-    # [MODIFIED] Get the full prompt from the request
-    prompt = data.get("prompt") # This will be the full prompt string
-    result = data.get("result") # This is the generated_url
-    title = data.get("title")   # Get the simple title (e.g., "LinkedIn Classic")
+    prompt = data.get("prompt")
+    result = data.get("result")
+    title = data.get("title")
 
     if not prompt or not result or not title:
         return jsonify({"error": "Title, prompt, and result required"}), 400
     
     new_item = SearchHistory(
         title=title, 
-        prompt_content=prompt, # Save the full detailed prompt
+        prompt_content=prompt,
         generated_result=result,
-        user_id=user_id
+        author=user # Use the user object
     )
     db.session.add(new_item)
     db.session.commit()
     db.session.close()
     return jsonify({"message": "History saved", "history_id": new_item.id}), 201
-
 
 @app.route("/api/history", methods=["GET"])
 @jwt_required()
@@ -513,18 +499,12 @@ def get_history():
     db.session.close()
     return jsonify([item.to_dict() for item in items]), 200
 
-
-# ---------------------------------------------
-# ✅ IMAGE GENERATION ROUTES
-# ---------------------------------------------
-
 @app.route('/upload-reference', methods=['POST'])
-@jwt_required(optional=True) # Allows upload even if not logged in
+@jwt_required(optional=True)
 def upload_reference():
     try:
         if 'file' not in request.files:
             return jsonify({"error": "No file uploaded"}), 400
-
         file = request.files['file']
         if file.filename == '':
             return jsonify({"error": "Empty filename"}), 400
@@ -533,64 +513,50 @@ def upload_reference():
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
 
-        print(f"[INFO] Reference uploaded: {filename}")
         return jsonify({
             "message": "File uploaded successfully",
             "filename": filename,
             "url": f"/uploads/{filename}"
         }), 200
-
     except Exception as e:
         print(f"[ERROR] Upload failed: {e}")
         return jsonify({"error": str(e)}), 500
-
 
 @app.route('/generate-image', methods=['POST'])
 @jwt_required()
 def generate_image():
     IMAGE_COST = 10
-    current_user = get_current_user() # This works thanks to user_lookup_loader
+    current_user = db.session.get(User, int(get_jwt_identity()))
+    if not current_user:
+         return jsonify({"error": "User not found"}), 404
 
     if current_user.credits < IMAGE_COST:
-        print(f"[LIMIT] User {current_user.username} (Credits: {current_user.credits}) needs {IMAGE_COST}.")
         return jsonify({"error": "Not enough credits"}), 403
 
     try:
         data = request.json
-        # [MODIFIED] Get all new fields from frontend
         ref_filename = data.get("reference_filename")
         category = data.get("category")
         theme = data.get("theme")
         look = data.get("look")
         color_tone = data.get("color_tone")
         usage = data.get("usage")
-        custom_prompt = data.get("custom_prompt") # This can be None
+        custom_prompt = data.get("custom_prompt")
 
-        # [MODIFIED] Validate new fields
-        if not ref_filename:
-            return jsonify({"error": "Reference filename missing"}), 400
-        if not category:
-            return jsonify({"error": "Category missing"}), 400
-        if not theme:
-            return jsonify({"error": "Theme missing"}), 400
+        if not all([ref_filename, category, theme, look, usage]):
+             return jsonify({"error": "Missing required fields"}), 400
 
-        # [MODIFIED] Use a generic artist, as style is now dynamic
         artist = "a world-class digital artist and photo-manipulation expert"
-
         ref_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(ref_filename))
         if not os.path.exists(ref_path):
             return jsonify({"error": "Reference image not found"}), 404
 
-        print(f"[INFO] User {current_user.username} generating image. Theme: '{theme}', Look: '{look}'")
-
-        # Convert image to base64 safely
         with Image.open(ref_path) as img:
             buffer = io.BytesIO()
-            img.thumbnail((1024, 1024)) # Resize to prevent overly large payloads
+            img.thumbnail((1024, 1024))
             img.convert("RGB").save(buffer, format="JPEG", quality=90)
             img_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
         
-        # [MODIFIED] Create the new dynamic prompt
         prompt = (
             f"You are {artist}.\n"
             f"Your task is to transform the person in the reference photo according to the user's request. "
@@ -598,36 +564,21 @@ def generate_image():
             f"--- Main Category ---\n"
             f"The desired category is: **{category}**.\n\n"
             f"--- Main Theme ---\n"
-            f"The desired theme is: **{theme}**. This means you must change the clothing, background, and overall atmosphere to match this theme. For example, if the theme is 'LinkedIn Classic', give them professional attire and a clean, neutral background. If 'Epic Knight', give them armor and a fantasy background.\n\n"
+            f"The desired theme is: **{theme}**.\n\n"
             f"--- Desired Look ---\n"
-            f"The final image must have a **{look}** look. If 'artistic' or 'cinematic', add drama, atmosphere, and a painterly feel. If 'realistic', make it look like a real, high-end 8K photoshoot.\n\n"
+            f"The final image must have a **{look}** look.\n\n"
             f"--- Color & Tone ---\n"
-            f"Apply this specific color grade and mood: **{color_tone}**. If '{color_tone}' is 'No preference' or blank, use a color tone that best matches the **{theme}**.\n\n"
+            f"Apply this specific color grade and mood: **{color_tone}**.\n\n"
             f"--- Image Usage ---\n"
-            f"The image will be used for: **{usage}**. Adapt the composition accordingly: "
-            f"  - 'Profile Picture': A powerful, closer-up medium shot or headshot. "
-            f"  - 'Social Media Post': A dynamic 1:1 square composition. "
-            f"  - 'Social Media Story': A 9:16 vertical composition. "
-            f"  - 'Print': Maximum 8K detail, ultra-high resolution. "
-            f"  - 'Just for fun': A standard, well-balanced shot.\n\n"
+            f"The image will be used for: **{usage}**.\n\n"
         )
-
-        # [NEW] Append custom prompt if it exists
         if custom_prompt:
-            prompt += (
-                f"--- Additional User Instructions ---\n"
-                f"{custom_prompt}\n\n"
-            )
-
-        # Final instruction
+            prompt += f"--- Additional User Instructions ---\n{custom_prompt}\n\n"
         prompt += (
             f"--- Final Instruction ---\n"
             f"Combine all elements. Change the clothing and background to be 100% appropriate for the **{theme}** and **{look}**. "
             f"**Repeat: Keep the subject's original face and identity perfectly recognizable.**"
         )
-        
-        # --- End of [MODIFIED] prompt ---
-
 
         payload = {
             "contents": [{
@@ -636,114 +587,70 @@ def generate_image():
                     {"inline_data": {"mime_type": "image/jpeg", "data": img_base64}}
                 ]
             }],
-            "generationConfig": {
-                "temperature": 0.6,
-                "topP": 0.9,
-                "topK": 40
-            },
+            "generationConfig": { "temperature": 0.6, "topP": 0.9, "topK": 40 },
         }
         headers = {"Content-Type": "application/json"}
 
-        # Added connection resilience
         try:
-            response = requests.post(
-                API_URL,
-                headers=headers,
-                json=payload,
-                timeout=(10, 180)  # (connect_timeout, read_timeout)
-            )
+            response = requests.post(API_URL, headers=headers, json=payload, timeout=(10, 180))
         except requests.exceptions.Timeout:
-            print("[ERROR] Gemini API request timed out.")
             return jsonify({"error": "Image generation timed out. Please try again."}), 504
-        except requests.exceptions.ConnectionError as ce:
-            print(f"[ERROR] Connection reset or dropped: {ce}")
+        except requests.exceptions.ConnectionError:
             return jsonify({"error": "Connection to image generator lost. Try again."}), 502
         except Exception as e:
-            print(f"[ERROR] Unexpected network error: {e}")
             return jsonify({"error": f"Network error: {str(e)}"}), 500
 
-        # Handle Gemini response
         if response.status_code != 200:
-            print(f"[ERROR] Gemini API Error {response.status_code}: {response.text}")
             return jsonify({"error": f"Gemini API returned {response.status_code}", "details": response.text}), response.status_code
 
         result = response.json()
-
-        # Safety check
-        if "promptFeedback" in result:
-            print(f"[WARN] Gemini promptFeedback: {result['promptFeedback']}")
-            block_reason = result.get("promptFeedback", {}).get("blockReason", "Unknown")
-            if block_reason == "SAFETY" and not result.get("candidates"):
-                return jsonify({"error": f"Blocked by safety filter: {block_reason}"}), 400
+        
+        if "promptFeedback" in result and result.get("promptFeedback", {}).get("blockReason") == "SAFETY" and not result.get("candidates"):
+             return jsonify({"error": f"Blocked by safety filter: {result['promptFeedback']['blockReason']}"}), 400
 
         candidates = result.get("candidates", [])
         if not candidates:
-            feedback = result.get("promptFeedback", "No feedback")
-            print("[WARN] Gemini returned no candidates.")
-            return jsonify({"error": "No output from Gemini", "details": feedback}), 400
+            return jsonify({"error": "No output from Gemini", "details": result.get("promptFeedback", "No feedback")}), 400
 
-        parts = candidates[0].get("content", {}).get("parts", [])
-        gen_b64 = None
-        for part in parts:
-            if "inline_data" in part:
-                gen_b64 = part["inline_data"]["data"]
-                break
-            elif "inlineData" in part: # Handle both casings
-                gen_b64 = part["inlineData"]["data"]
-                break
+        gen_b64 = next((part["inline_data"]["data"] for part in candidates[0].get("content", {}).get("parts", []) if "inline_data" in part), None)
+        if not gen_b64:
+             gen_b64 = next((part["inlineData"]["data"] for part in candidates[0].get("content", {}).get("parts", []) if "inlineData" in part), None)
 
         if not gen_b64:
             return jsonify({"error": "Gemini returned no image data"}), 400
 
-        # Save generated image
         generated_filename = f"gen_{int(time.time())}_{secure_filename(theme.split(' ')[0])}.jpg"
         generated_path = os.path.join(app.config['GENERATED_FOLDER'], generated_filename)
         with open(generated_path, "wb") as f:
             f.write(base64.b64decode(gen_b64))
-
         generated_url = f"/generated/{generated_filename}"
 
-        # Update credits + history safely
-        # We fetch the user again *inside* the session to be safe
-        user_to_update = db.session.get(User, current_user.id)
-        if not user_to_update:
-             return jsonify({"error": "User not found during credit update"}), 500
-             
-        user_to_update.credits -= IMAGE_COST
-        
-        # [MODIFIED] Use the 'theme' as the title for history
+        current_user.credits -= IMAGE_COST
         history_title = f"{theme.title()} ({look.title()})"
         new_history_item = SearchHistory(
             title=history_title,
-            prompt_content=prompt, # Save the full prompt
+            prompt_content=prompt,
             generated_result=generated_url,
-            user_id=user_to_update.id
+            author=current_user
         )
         db.session.add(new_history_item)
         db.session.commit()
         
-        new_credit_count = user_to_update.credits
-        db.session.close() # Close session after commit
-
-        print(f"[INFO] Generation complete for {user_to_update.username}: {generated_filename} (Credits left: {new_credit_count})")
+        new_credit_count = current_user.credits
+        db.session.close()
 
         return jsonify({
             "message": "Image generated successfully",
             "generated_image_url": generated_url,
-            "new_credit_count": new_credit_count,
-            "prompt_for_history": prompt, # [NEW] Send prompt back to frontend
-            "title_for_history": history_title # [NEW] Send title back to frontend
+            "new_credit_count": new_credit_count
         }), 200
 
     except Exception as e:
         print(f"[ERROR] Generation failed: {e}")
-        db.session.rollback() # Rollback any partial db changes on error
+        db.session.rollback()
+        db.session.close()
         return jsonify({"error": str(e)}), 500
 
-
-# ------------------------------------------------------
-# 🗂 Serve Uploaded and Generated Files
-# ------------------------------------------------------
 @app.route('/uploads/<path:filename>')
 def serve_upload(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
@@ -752,19 +659,14 @@ def serve_upload(filename):
 def serve_generated(filename):
     return send_from_directory(app.config['GENERATED_FOLDER'], filename)
 
-
 # ------------------------
-# ✅ Server Runner
+# Server Runner
 # ------------------------
 if __name__ == "__main__":
-    # The db.create_all() here is fine for local dev.
-    # The one inside the app_context at the top handles the Gunicorn boot.
     with app.app_context():
         print("Checking/creating database tables for local run...")
         db.create_all()
         print("Database ready.")
     
-    # Use 0.0.0.0 to be accessible externally (like Gunicorn does)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
-
