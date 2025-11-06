@@ -464,14 +464,13 @@ def respond():
     data = request.get_json() or {}
 
     prompt_content = data.get("prompt", "")
-    max_sentences = int(data.get("max_sentences", 2))     # client controls sentence length
-    num_responses = int(data.get("num_responses", 1))     # client controls how many outputs
-    temperature = float(data.get("temperature", 0.2))     # client controls creativity
+    max_sentences = int(data.get("max_sentences", 2))
+    num_responses = int(data.get("num_responses", 1))
+    temperature = float(data.get("temperature", 0.2))
 
     if not prompt_content:
         return jsonify({"error": "No prompt content provided"}), 400
 
-    # --- STRICT FORMAT CONTROL ---
     chat_prompt = f"""
 You are CreatorsAI — ultra-concise and extremely precise.
 
@@ -499,10 +498,18 @@ USER QUESTION:
             }
         )
 
-        result = response.text.strip() if hasattr(response, "text") else ""
+        # ---- SAFE TEXT EXTRACTION ----
+        if hasattr(response, "text"):
+            result_text = response.text.strip()
+        else:
+            result_text = (
+                response.candidates[0].content.parts[0].text.strip()
+                if response.candidates and response.candidates[0].content.parts
+                else ""
+            )
 
         return jsonify({
-            "result": result,
+            "result": result_text,
             "meta": {
                 "max_sentences": max_sentences,
                 "num_responses": num_responses,
@@ -720,6 +727,7 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
