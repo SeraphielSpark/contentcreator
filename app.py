@@ -79,7 +79,7 @@ print(f"[INFO] Database path: {app.config['SQLALCHEMY_DATABASE_URI']}")
 # ------------------------
 # Google API Configuration
 # ------------------------
-GOOGLE_API_KEY = os.environ.get("GEMINI_API_KEY") 
+GOOGLE_API_KEY = os.environ.get("GEMINI") 
 if not GOOGLE_API_KEY:
     print("[FATAL ERROR] GEMINI_API_KEY is not set.")
 try:
@@ -670,4 +670,5 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
