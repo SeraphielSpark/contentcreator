@@ -345,39 +345,25 @@ def generate():
 
     # --- [FIX 2] ---
     # Separated prompts for the new client method
-    system_prompt = (
+    chat_prompt = (f'''
         "You are an expert social media strategist.\n"
-        "Your task is to extract exactly 7 SEO-optimized hashtags from the user's content.\n"
+        "Your task is to extract exactly 7 SEO-optimized hashtags for the user which is "{content}" .\n"
         "RULES:\n"
         "1. Return ONLY the hashtags.\n"
         "2. Each hashtag must start with a #.\n"
         "3. Separate each hashtag with a comma.\n"
         "4. Do not include any other text, titles, or explanations."
+        '''
     )
-    user_prompt = f"Here is the content: \"{content}\""
     # --- [END FIX 2] ---
 
     try:
         # --- [FIX 3] ---
-        # Use the correct model name and the new config
-        rsp = client.models.generate_content(
-            model="gemini-2.5-flash",  # <-- Correct model
-            config=types.GenerateContentConfig(
-                system_instruction=system_prompt
-            ),
-            contents=user_prompt
-        )
-        # --- [END FIX 3] ---
+        response = client.models.generate_content(model="gemini-2.5-flash", contents=chat_prompt)
+        result = response.text.strip() if response.text else ""
         
-        text = rsp.text.strip() if rsp.text else ""
-
-    except Exception as e:
-        print("Gemini error:", e)
-        # Pass the Google error to the frontend
-        return jsonify(error=f"Gen failed: {str(e)}"), 500
-
     # This parsing logic is good and now matches the prompt
-    hashtags = [t.strip() for t in text.split(",") if t.strip().startswith("#")]
+    hashtags = [t.strip() for t in result.split(",") if t.strip().startswith("#")]
     
     if not hashtags:
         # Handle cases where the model didn't return what we want
@@ -399,7 +385,7 @@ def respond():
         return jsonify({"error": "No prompt content provided"}), 400
 
     chat_prompt = f"""
-    You are CreatorsAI — a friendly, insightful assistant for the creator economy.
+    You are CreatorsAI a friendly, insightful assistant for the creator economy.
     A user asked:
     "{prompt_content}"
 
@@ -770,6 +756,7 @@ if __name__ == "__main__":
     # Use 0.0.0.0 to be accessible externally (like Gunicorn does)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
