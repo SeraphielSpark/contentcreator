@@ -79,14 +79,13 @@ print(f"[INFO] Database path: {app.config['SQLALCHEMY_DATABASE_URI']}")
 # ------------------------
 # Google API Configuration
 # ------------------------
-try:
-    GOOGLE_API_KEY = os.environ.get("GEMINI")
-    if not GOOGLE_API_KEY:
-        print("[FATAL ERROR] GOOGLE_API_KEY is not set. Please add it in Render Environment Variables.")
-    client = genai.Client(api_key=GOOGLE_API_KEY)
-except Exception as e:
-    print(f"[ERROR] Failed to initialize Google GenAI client: {e}")
-    client = None
+#try:
+ #   GOOGLE_API_KEY = os.environ.get("GEMINI")
+  #  if not GOOGLE_API_KEY:
+   #     print("[FATAL ERROR] GOOGLE_API_KEY is not set. Please add it in Render Environment Variables.")
+    #client = genai.Client(api_key=GOOGLE_API_KEY)
+#except Exception as e:
+ ##  client = None
 
 MODEL_NAME = "gemini-2.5-flash-image" 
 GOOGLE_API_KEY1 = os.environ.get("GEMINI")
@@ -429,6 +428,10 @@ def generate():
     )
 
     try:
+        GOOGLE_API_KEY = os.environ.get("GEMINI")
+        if not GOOGLE_API_KEY:
+            print("[FATAL ERROR] GOOGLE_API_KEY is not set. Please add it in Render Environment Variables.")
+        client = genai.Client(api_key=GOOGLE_API_KEY)
         # FIX 3 — Correct Gemini method & structure
         response = client.models.generate_content(
             model="gemini-2.5-flash",
@@ -717,6 +720,7 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
