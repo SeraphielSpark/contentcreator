@@ -79,16 +79,14 @@ print(f"[INFO] Database path: {app.config['SQLALCHEMY_DATABASE_URI']}")
 # ------------------------
 # Google API Configuration
 # ------------------------
-GOOGLE_API_KEY = os.environ.get("GEMINI") 
-if not GOOGLE_API_KEY:
-    print("[FATAL ERROR] GEMINI_API_KEY is not set.")
 try:
-    genai.configure(api_key=GOOGLE_API_KEY)
-    text_model = genai.GenerativeModel('gemini-1.5-flash')
-    print("[INFO] Google GenAI SDK (for Text) initialized.")
+    GOOGLE_API_KEY = os.environ.get("GEMINI")
+    if not GOOGLE_API_KEY:
+        print("[FATAL ERROR] GOOGLE_API_KEY is not set. Please add it in Render Environment Variables.")
+    client = genai.Client(api_key=GOOGLE_API_KEY)
 except Exception as e:
     print(f"[ERROR] Failed to initialize Google GenAI client: {e}")
-    text_model = None
+    client = None
 
 MODEL_NAME = "gemini-2.5-flash-image" 
 GOOGLE_API_KEY1 = os.environ.get("GEMINI")
@@ -411,55 +409,104 @@ def google_callback():
 # ------------------------
 @app.route("/generate", methods=["POST"])
 def generate():
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Request must be JSON"}), 400
-    post_content = data.get("post", "")
-    if not post_content:
-        return jsonify({"error": "No post content provided"}), 400
-    prompt = f"""
-    You are an expert social media strategist.
-    The user provided this post caption: "{post_content}"
-    Your task:
-    1. Keep the user's caption exactly as it is.
-    2. Add a new line and generate ONLY 7–10 trending, SEO-optimized hashtags.
-    3. Make hashtags aesthetic and relevant.
-    Format:
-    [Original caption]
+    data = request.get_json(silent=True) or {}
+    
+    # FIX 1 — Match frontend param "post"
+    content = (data.get("post") or "").strip()
 
-    [Hashtags]
-    """
+    if not content:
+        return jsonify(error="Content required (must be sent as 'post')"), 400
+
+    # FIX 2 — Clean prompt (must be a normal string, not broken f-string)
+    chat_prompt = (
+        "You are an expert social media strategist.\n"
+        f"Your task is to extract exactly 7 SEO-optimized hashtags for: \"{content}\".\n"
+        "RULES:\n"
+        "1. Return ONLY the hashtags.\n"
+        "2. Each hashtag must start with a #.\n"
+        "3. Separate each hashtag with a comma.\n"
+        "4. Do not include any other text, titles, or explanations.\n"
+    )
+
     try:
-        if not text_model:
-            return jsonify({"error": "Google AI client not initialized. Check API Key."}), 500
-        response = text_model.generate_content(prompt)
-        result = response.text.strip() if hasattr(response, "text") else "No response text received."
-        return jsonify({"result": result})
+        # FIX 3 — Correct Gemini method & structure
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=chat_prompt
+        )
+
+        model_output = response.text.strip() if response.text else ""
+
+        # Parse only valid hashtags
+        hashtags = [
+            h.strip() for h in model_output.split(",")
+            if h.strip().startswith("#")
+        ]
+
+        if not hashtags:
+            print(f"Model returned unexpected output: {model_output}")
+            return jsonify(
+                error="Failed to parse hashtags from model response",
+                model_output=model_output
+            ), 500
+
+        return jsonify(hashtags=hashtags)
+
     except Exception as e:
         print(f"[ERROR] /generate: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/respond", methods=["POST"])
 def respond():
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Request must be JSON"}), 400
+    data = request.get_json() or {}
+
     prompt_content = data.get("prompt", "")
+    max_sentences = int(data.get("max_sentences", 2))     # client controls sentence length
+    num_responses = int(data.get("num_responses", 1))     # client controls how many outputs
+    temperature = float(data.get("temperature", 0.2))     # client controls creativity
+
     if not prompt_content:
         return jsonify({"error": "No prompt content provided"}), 400
-    chat_prompt = f"""
-    You are CreatorsAI — a friendly, insightful assistant for the creator economy.
-    A user asked:
-    "{prompt_content}"
 
-    Give a concise, practical answer tailored for content creators.
-    """
+    # --- STRICT FORMAT CONTROL ---
+    chat_prompt = f"""
+You are CreatorsAI — ultra-concise and extremely precise.
+
+TASK:
+- Generate EXACTLY {num_responses} responses.
+- Each response MUST contain EXACTLY {max_sentences} sentences.
+- NO introductions, NO explanations, NO extra text.
+- Format STRICTLY like this:
+
+1. sentence sentence
+2. sentence sentence
+3. sentence sentence
+
+USER QUESTION:
+"{prompt_content}"
+"""
+
     try:
-        if not text_model:
-            return jsonify({"error": "Google AI client not initialized. Check API Key."}), 500
-        response = text_model.generate_content(chat_prompt)
-        result = response.text.strip() if hasattr(response, "text") else "No response text received."
-        return jsonify({"result": result})
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=chat_prompt,
+            generation_config={
+                "temperature": temperature,
+                "max_output_tokens": 3000
+            }
+        )
+
+        result = response.text.strip() if hasattr(response, "text") else ""
+
+        return jsonify({
+            "result": result,
+            "meta": {
+                "max_sentences": max_sentences,
+                "num_responses": num_responses,
+                "temperature": temperature
+            }
+        })
+
     except Exception as e:
         print(f"[ERROR] /respond: {e}")
         return jsonify({"error": str(e)}), 500
@@ -670,5 +717,6 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
