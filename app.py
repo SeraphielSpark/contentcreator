@@ -497,14 +497,11 @@ USER QUESTION:
     try:
         GOOGLE_API_KEY = os.environ.get("GEMINI")
         if not GOOGLE_API_KEY:
-            print("[FATAL ERROR] GOOGLE_API_KEY is not set. Please add it in Render Environment Variables.")
+            print("[FATAL ERROR] GOOGLE_API_KEY is not set.")
+        
         client = genai.Client(api_key=GOOGLE_API_KEY)
-        # FIX 3 — Correct Gemini method & structure
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=chat_prompt
-        )
 
+        # ✅ Only ONE valid call
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=chat_prompt,
@@ -514,7 +511,7 @@ USER QUESTION:
             }
         )
 
-        # ---- SAFE TEXT EXTRACTION ----
+        # ✅ SAFE TEXT EXTRACTION FOR GEMINI v2.5
         if hasattr(response, "text"):
             result_text = response.text.strip()
         else:
@@ -743,6 +740,7 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
