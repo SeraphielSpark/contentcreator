@@ -41,7 +41,13 @@ def get_jwt_identity_optional():
 # ------------------------
 app = Flask(__name__)
 CORS(app,
-     resources={r"/*": {"origins": ["*"]}},
+     resources={r"/*": {
+         "origins": [
+             "https://creatorsai.ai",
+             "https://www.creatorsai.ai",
+             "http://127.0.0.1:5500"
+         ]
+     }},
      supports_credentials=True,
      allow_headers=["Content-Type", "Authorization"],
      expose_headers=["Authorization", "Content-Type"],
@@ -737,6 +743,7 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
