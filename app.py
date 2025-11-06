@@ -52,7 +52,7 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "fallback_secret_key_123
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=3)
 app.config["JWT_SECRET_KEY"] = "super-secret-key"
-app.config["FRONTEND_URL"] ='http://127.0.0.1:5500' #os.environ.get("FRONTEND_URL", "http://127.0.0.1:5500")
+app.config["FRONTEND_URL"] =os.environ.get("FRONTEND_URL", "https://creatorsai.ai/")
 
 # --- Email Configuration ---
 app.config['MAIL_SERVER'] ='smtp.googlemail.com' #os.environ.get('MAIL_SERVER', 'smtp.googlemail.com')
@@ -670,3 +670,4 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
