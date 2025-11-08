@@ -36,29 +36,35 @@ def get_jwt_identity_optional():
     except (NoAuthorizationError, ExpiredSignatureError):
         return None
 
+
 # ------------------------
 # Flask App Setup
 # ------------------------
 app = Flask(__name__)
 
 CORS(app,
-     resources={r"/*": {
-         "origins": [
-             "https://creatorsai.ai",
-             "https://www.creatorsai.ai",
-             "http://127.0.0.1:5500",
-             "http://localhost:5500"
-         ]
-     }},
+     resources={r"/auth/*": {"origins": "*"}},
      supports_credentials=True
 )
 
+# GLOBAL CORS FIX FOR RENDER
 @app.after_request
-def add_cors_headers(response):
-    response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "")
+def apply_cors(response):
+    origin = request.headers.get("Origin")
+    allowed = [
+        "https://creatorsai.ai",
+        "https://www.creatorsai.ai",
+        "http://127.0.0.1:5500",
+        "http://localhost:5500"
+    ]
+
+    if origin in allowed:
+        response.headers["Access-Control-Allow-Origin"] = origin
+
+    response.headers["Access-Control-Allow-Credentials"] = "true"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-    response.headers["Access-Control-Allow-Credentials"] = "true"
+
     return response
 
 chat_histories = {}  # key: chat_id, value: list of messages [{"role": "user"/"ai", "text": "..."}]
@@ -196,6 +202,15 @@ def home():
 # ---------------------------------
 # [NEW] AUTH FLOW: STEP 1 (Send OTP)
 # ---------------------------------
+@app.route("/auth/register/send-otp", methods=["OPTIONS"])
+def otp_preflight():
+    response = jsonify({"status": "ok"})
+    response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin")
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+    return response, 200
+
 @app.route("/auth/register/send-otp", methods=["POST"])
 def register_send_otp():
     data = request.get_json() or {}
@@ -258,6 +273,15 @@ def register_send_otp():
 # ------------------------------------
 # [NEW] AUTH FLOW: STEP 2 (Verify OTP)
 # ------------------------------------
+@app.route("/auth/register/verify-otp", methods=["OPTIONS"])
+def verify_preflight():
+    response = jsonify({"status": "ok"})
+    response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin")
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+    return response, 200
+
 @app.route("/auth/register/verify-otp", methods=["POST"])
 def register_verify_otp():
     data = request.get_json() or {}
@@ -768,6 +792,7 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
