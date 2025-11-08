@@ -514,11 +514,15 @@ USER QUESTION:
         if hasattr(response, "text"):
             result_text = response.text.strip()
         else:
-            result_text = (
-                response.candidates[0].content.parts[0].text.strip()
-                if response.candidates and response.candidates[0].content.parts
-                else ""
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=[chat_prompt],  # Note: a list of strings
+                model_params={
+                    "temperature": 0.2,
+                    "max_output_tokens": 3000
+                }
             )
+
 
         return jsonify({
             "result": result_text,
@@ -739,6 +743,7 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
