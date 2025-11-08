@@ -40,18 +40,26 @@ def get_jwt_identity_optional():
 # Flask App Setup
 # ------------------------
 app = Flask(__name__)
+
 CORS(app,
      resources={r"/*": {
          "origins": [
              "https://creatorsai.ai",
              "https://www.creatorsai.ai",
-             "http://127.0.0.1:5500"
+             "http://127.0.0.1:5500",
+             "http://localhost:5500"
          ]
      }},
-     supports_credentials=True,
-     allow_headers=["Content-Type", "Authorization"],
-     expose_headers=["Authorization", "Content-Type"],
-     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+     supports_credentials=True
+)
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "")
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 chat_histories = {}  # key: chat_id, value: list of messages [{"role": "user"/"ai", "text": "..."}]
 
@@ -164,6 +172,8 @@ with app.app_context():
     print("[INFO] Initializing database tables...")
     db.create_all()
     print("[INFO] Database tables initialized.")
+
+
 
 # ------------------------
 # JWT Config
@@ -758,6 +768,7 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
