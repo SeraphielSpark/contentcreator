@@ -30,6 +30,7 @@ from flask_mail import Mail, Message
 # Helper for optional JWT
 # ------------------------
 def get_jwt_identity_optional():
+    """Retrieves JWT identity if token is present, otherwise returns None."""
     try:
         verify_jwt_in_request(optional=True)
         return get_jwt_identity()
@@ -48,13 +49,17 @@ app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=3)
 app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "super-secret-key") 
 app.config["FRONTEND_URL"] = os.environ.get("FRONTEND_URL", "http://127.0.0.1:5500") 
 
-# --- Email Configuration ---
+# --- Email Configuration (Rely entirely on environment variables) ---
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.googlemail.com')
 app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', 'taiwoemmanuel435@gmail.com')
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', 'cofdyuhubuwvfibh') 
+# NOTE: Removed hardcoded defaults for sensitive data. These MUST be set in Render env vars.
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', app.config.get('MAIL_USERNAME'))
+
+if not app.config['MAIL_USERNAME'] or not app.config['MAIL_PASSWORD']:
+    print("[WARNING] MAIL_USERNAME or MAIL_PASSWORD environment variables are missing. Email sending will fail.")
 
 # --- Folder Configuration ---
 UPLOAD_FOLDER = 'uploads'
@@ -67,7 +72,6 @@ os.makedirs(app.config['GENERATED_FOLDER'], exist_ok=True)
 # --- Database Path ---
 db_path = os.path.join("/tmp", "app.db")
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", f"sqlite:///{db_path}") 
-print(f"[INFO] Database path: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
 # ------------------------
 # Google API Configuration
@@ -106,7 +110,7 @@ def apply_cors(response):
         "http://localhost:5500",
     ]
     
-    # FIX: Handle OPTIONS preflight request explicitly (Crucial for CORS error)
+    # CRITICAL FIX: Handle OPTIONS preflight request explicitly
     if request.method == 'OPTIONS':
         if origin and origin in allowed:
             response.headers["Access-Control-Allow-Origin"] = origin
@@ -137,7 +141,7 @@ oauth.register(
 )
 
 # ------------------------
-# Database Models (remain the same)
+# Database Models (no changes)
 # ------------------------
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -172,7 +176,7 @@ class SearchHistory(db.Model):
             'timestamp': self.timestamp.isoformat()
         }
 # ------------------------
-# Create Tables & JWT Config (remain the same)
+# Create Tables & JWT Config (no changes)
 # ------------------------
 with app.app_context():
     print("[INFO] Initializing database tables...")
@@ -205,11 +209,11 @@ def register_send_otp():
 
     user = User.query.filter_by(email=email).first()
     
-    # FIX: Check 1 (Existing verified user with password)
+    # Check 1: Existing verified user with password
     if user and user.is_verified and user.password:
         return jsonify({"msg": "An account with this email already exists."}), 400
     
-    # FIX: Check 2 (Existing verified user via social login)
+    # Check 2: Existing verified user via social login (Causes 400 error you saw)
     if user and user.oauth_provider and user.is_verified:
         return jsonify({"msg": "An account with this email already exists via social login. Please use the Google sign-in button."}), 400
 
@@ -247,7 +251,10 @@ def register_send_otp():
             recipients=[email]
         )
         msg.body = f"Welcome to CreatorsAI!\n\nYour verification code is: {otp}\n\nThis code will expire in 10 minutes."
-        mail.send(msg)
+        
+        # This is where the external SMTP call occurs
+        mail.send(msg) 
+        
         print(f"[INFO] Sent OTP email to {email}.")
         
         db.session.commit()
@@ -257,16 +264,15 @@ def register_send_otp():
     except Exception as e:
         db.session.rollback()
         db.session.close()
-        print(f"[ERROR] Failed to send email: {e}")
-        # Server-side email failure often causes network errors on the client
-        return jsonify({"msg": "Could not send verification email. Please try again."}), 500
+        # Log the specific mail failure error
+        print(f"[FATAL ERROR] Failed to send email via SMTP: {e}")
+        return jsonify({"msg": "Could not send verification email. Please check server logs for SMTP error."}), 500
 
 # ------------------------------------
 # AUTH FLOW: STEP 2 (Verify OTP)
 # ------------------------------------
 @app.route("/auth/register/verify-otp", methods=["POST"])
 def register_verify_otp():
-    # ... (function body remains the same)
     data = request.get_json() or {}
     email = data.get("email")
     otp = data.get("otp")
@@ -311,11 +317,10 @@ def register_verify_otp():
     return jsonify(user_info), 200
 
 # ----------------------------
-# [CORRECTED] Email Login endpoint
+# Email Login endpoint (no changes)
 # ----------------------------
 @app.route("/auth/login", methods=["POST"])
 def login():
-    # ... (function body remains the same)
     data = request.get_json()
     email = data.get("email")
     password = data.get("password")
@@ -347,17 +352,15 @@ def login():
     return jsonify(user_info), 200
 
 # ----------------------------
-# [CORRECTED] Social Login Routes
+# Social Login Routes (no changes)
 # ----------------------------
 @app.route('/auth/google/login')
 def google_login():
-    # ... (function body remains the same)
     redirect_uri = url_for('google_callback', _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
 @app.route('/auth/google/callback')
 def google_callback():
-    # ... (function body remains the same)
     try:
         token = oauth.google.authorize_access_token()
         if not token or 'id_token' not in token:
@@ -371,7 +374,6 @@ def google_callback():
         user = User.query.filter_by(email=user_email).first()
 
         if not user:
-            # Case 1: New user via Google
             user = User(
                 email=user_email,
                 oauth_provider='google',
@@ -381,19 +383,12 @@ def google_callback():
                 credits=200
             )
             db.session.add(user)
-            print(f"[INFO] New user created via Google: {user_email}")
-
         elif user and not user.oauth_provider:
-            # Case 2: Existing email/password user linking to Google for the first time
             user.oauth_provider = 'google'
             user.oauth_provider_id = user_google_id
             user.is_verified = True
-            print(f"[INFO] Existing email user linked to Google: {user_email}")
-        
         elif user and user.oauth_provider == 'google' and user.oauth_provider_id != user_google_id:
-             # Case 3: Existing Google user ID mismatch (update the ID)
              user.oauth_provider_id = user_google_id
-             print(f"[INFO] Existing Google user ID updated: {user_email}")
         
         user.is_verified = True
             
@@ -408,7 +403,6 @@ def google_callback():
             'access_token': access_token
         }
         
-        # Post message back to the frontend
         popup_response_script = f"""
         <html>
         <head>
@@ -431,7 +425,6 @@ def google_callback():
         print(f"[ERROR] Google OAuth failed: {e}")
         db.session.rollback()
         
-        # Post error message back to the frontend
         popup_error_script = f"""
         <html>
         <head>
@@ -458,6 +451,7 @@ def google_callback():
 
 @app.route("/generate", methods=["POST"])
 def generate():
+    # ... (function body remains the same)
     data = request.get_json(silent=True) or {}
     
     content = (data.get("post") or "").strip()
@@ -510,6 +504,7 @@ def generate():
 
 @app.route("/respond", methods=["POST"])
 def respond():
+    # ... (function body remains the same)
     data = request.get_json() or {}
 
     prompt_content = data.get("prompt", "").strip()
@@ -581,6 +576,7 @@ USER QUESTION:
 @app.route("/api/history", methods=["POST"])
 @jwt_required()
 def save_history():
+    # ... (function body remains the same)
     user_id = get_jwt_identity()
     user = db.session.get(User, int(user_id))
     if not user:
@@ -608,6 +604,7 @@ def save_history():
 @app.route("/api/history", methods=["GET"])
 @jwt_required()
 def get_history():
+    # ... (function body remains the same)
     user_id = get_jwt_identity()
     items = SearchHistory.query.filter_by(user_id=user_id).order_by(SearchHistory.timestamp.desc()).all()
     db.session.close()
@@ -616,6 +613,7 @@ def get_history():
 @app.route('/upload-reference', methods=['POST'])
 @jwt_required(optional=True)
 def upload_reference():
+    # ... (function body remains the same)
     try:
         if 'file' not in request.files:
             return jsonify({"error": "No file uploaded"}), 400
@@ -705,6 +703,7 @@ def generate_image():
         }
         headers = {"Content-Type": "application/json"}
 
+        # This is where the external Gemini API call occurs
         try:
             response = requests.post(API_URL, headers=headers, json=payload, timeout=(10, 180))
         except requests.exceptions.Timeout:
@@ -784,4 +783,3 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
-
