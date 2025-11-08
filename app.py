@@ -473,43 +473,39 @@ def generate():
 def respond():
     data = request.get_json() or {}
 
-    prompt_content = data.get("prompt", "")
+    prompt_content = data.get("prompt", "").strip()
     max_sentences = int(data.get("max_sentences", 2))
     num_responses = int(data.get("num_responses", 1))
-    chat_id = data.get("chat_id")  # optional: existing conversation
+    chat_id = data.get("chat_id")
 
     if not prompt_content:
         return jsonify({"error": "No prompt content provided"}), 400
 
-    # Generate a new chat_id if not provided
+    # Generate new chat_id if missing
     if not chat_id:
         chat_id = str(uuid.uuid4())
         chat_histories[chat_id] = []
 
-    # Initialize history if missing
     chat_histories.setdefault(chat_id, [])
 
-    # Append current user message to history
+    # Append user's message to history
     chat_histories[chat_id].append({"role": "user", "text": prompt_content})
 
-    # Build conversation context for the model
+    # Build conversation context
     history_text = ""
     for msg in chat_histories[chat_id]:
-        role_prefix = "USER" if msg["role"] == "user" else "AI"
-        history_text += f"{role_prefix}: {msg['text']}\n"
+        prefix = "USER" if msg["role"] == "user" else "AI"
+        history_text += f"{prefix}: {msg['text']}\n"
 
+    # Prompt for Gemini
     chat_prompt = f"""
-You are CreatorsAI — ultra-concise and extremely precise.
+You are CreatorsAI — precise, concise, and friendly.
 
 TASK:
-- Generate EXACTLY {num_responses} responses.
-- Each response MUST contain EXACTLY {max_sentences} sentences.
-- NO introductions, NO explanations, NO extra text.
-- Format STRICTLY like this:
-
-1. sentence sentence
-2. sentence sentence
-3. sentence sentence
+- Respond naturally in Markdown (use headings, bold, lists, paragraphs)
+- No numbered list unless the content truly requires it
+- Keep each response within {max_sentences} sentences
+- Avoid introductions or unnecessary text
 
 CONVERSATION HISTORY:
 {history_text}
@@ -519,16 +515,15 @@ USER QUESTION:
 """
 
     try:
-        GOOGLE_API_KEY = os.environ.get("GEMINI")
-        if not GOOGLE_API_KEY:
-            print("[FATAL ERROR] GOOGLE_API_KEY is not set.")
+        GEMINI_API_KEY = os.environ.get("GEMINI")
+        if not GEMINI_API_KEY:
+            raise RuntimeError("GEMINI API key is not set in environment variables.")
 
-        client = genai.Client(api_key=GOOGLE_API_KEY)
+        client = genai.Client(api_key=GEMINI_API_KEY)
 
-        # Gemini v2.5 call
         response = client.models.generate_content(
             model="gemini-2.5-flash",
-            contents=[chat_prompt]  # List of strings
+            contents=[chat_prompt]
         )
 
         # Extract text safely
@@ -541,15 +536,15 @@ USER QUESTION:
                 else ""
             )
 
-        # Save AI response in history
+        # Save AI response
         chat_histories[chat_id].append({"role": "ai", "text": result_text})
 
         return jsonify({
             "result": result_text,
             "meta": {
+                "chat_id": chat_id,
                 "max_sentences": max_sentences,
-                "num_responses": num_responses,
-                "chat_id": chat_id
+                "num_responses": num_responses
             }
         })
 
@@ -763,6 +758,7 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
