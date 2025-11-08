@@ -472,7 +472,6 @@ def respond():
     prompt_content = data.get("prompt", "")
     max_sentences = int(data.get("max_sentences", 2))
     num_responses = int(data.get("num_responses", 1))
-    temperature = float(data.get("temperature", 0.2))
 
     if not prompt_content:
         return jsonify({"error": "No prompt content provided"}), 400
@@ -501,35 +500,27 @@ USER QUESTION:
         
         client = genai.Client(api_key=GOOGLE_API_KEY)
 
-        # ✅ Only ONE valid call
+        # ✅ Correct Gemini v2.5 call WITHOUT temperature
         response = client.models.generate_content(
             model="gemini-2.5-flash",
-            contents=chat_prompt,
-            temperature=temperature,
-            max_output_tokens=3000
+            contents=[chat_prompt]  # List of strings
         )
 
-
-        # ✅ SAFE TEXT EXTRACTION FOR GEMINI v2.5
+        # ✅ Safe text extraction
         if hasattr(response, "text"):
             result_text = response.text.strip()
         else:
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=[chat_prompt],  # Note: a list of strings
-                model_params={
-                    "temperature": 0.2,
-                    "max_output_tokens": 3000
-                }
+            result_text = (
+                response.candidates[0].content[0].text.strip()
+                if response.candidates and response.candidates[0].content
+                else ""
             )
-
 
         return jsonify({
             "result": result_text,
             "meta": {
                 "max_sentences": max_sentences,
-                "num_responses": num_responses,
-                "temperature": temperature
+                "num_responses": num_responses
             }
         })
 
@@ -743,6 +734,7 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
