@@ -53,6 +53,8 @@ CORS(app,
      expose_headers=["Authorization", "Content-Type"],
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
+chat_histories = {}  # key: chat_id, value: list of messages [{"role": "user"/"ai", "text": "..."}]
+
 # --- App Configuration ---
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "fallback_secret_key_123")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -465,6 +467,8 @@ def generate():
         print(f"[ERROR] /generate: {e}")
         return jsonify({"error": str(e)}), 500
 
+# In-memory chat history storage (replace with DB for persistence)
+
 @app.route("/respond", methods=["POST"])
 def respond():
     data = request.get_json() or {}
@@ -472,9 +476,27 @@ def respond():
     prompt_content = data.get("prompt", "")
     max_sentences = int(data.get("max_sentences", 2))
     num_responses = int(data.get("num_responses", 1))
+    chat_id = data.get("chat_id")  # optional: existing conversation
 
     if not prompt_content:
         return jsonify({"error": "No prompt content provided"}), 400
+
+    # Generate a new chat_id if not provided
+    if not chat_id:
+        chat_id = str(uuid.uuid4())
+        chat_histories[chat_id] = []
+
+    # Initialize history if missing
+    chat_histories.setdefault(chat_id, [])
+
+    # Append current user message to history
+    chat_histories[chat_id].append({"role": "user", "text": prompt_content})
+
+    # Build conversation context for the model
+    history_text = ""
+    for msg in chat_histories[chat_id]:
+        role_prefix = "USER" if msg["role"] == "user" else "AI"
+        history_text += f"{role_prefix}: {msg['text']}\n"
 
     chat_prompt = f"""
 You are CreatorsAI — ultra-concise and extremely precise.
@@ -489,6 +511,9 @@ TASK:
 2. sentence sentence
 3. sentence sentence
 
+CONVERSATION HISTORY:
+{history_text}
+
 USER QUESTION:
 "{prompt_content}"
 """
@@ -497,16 +522,16 @@ USER QUESTION:
         GOOGLE_API_KEY = os.environ.get("GEMINI")
         if not GOOGLE_API_KEY:
             print("[FATAL ERROR] GOOGLE_API_KEY is not set.")
-        
+
         client = genai.Client(api_key=GOOGLE_API_KEY)
 
-        # ✅ Correct Gemini v2.5 call WITHOUT temperature
+        # Gemini v2.5 call
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=[chat_prompt]  # List of strings
         )
 
-        # ✅ Safe text extraction
+        # Extract text safely
         if hasattr(response, "text"):
             result_text = response.text.strip()
         else:
@@ -516,11 +541,15 @@ USER QUESTION:
                 else ""
             )
 
+        # Save AI response in history
+        chat_histories[chat_id].append({"role": "ai", "text": result_text})
+
         return jsonify({
             "result": result_text,
             "meta": {
                 "max_sentences": max_sentences,
-                "num_responses": num_responses
+                "num_responses": num_responses,
+                "chat_id": chat_id
             }
         })
 
@@ -734,6 +763,7 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
