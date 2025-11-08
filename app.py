@@ -30,7 +30,6 @@ from flask_mail import Mail, Message
 # Helper for optional JWT
 # ------------------------
 def get_jwt_identity_optional():
-    """Retrieves JWT identity if token is present, otherwise returns None."""
     try:
         verify_jwt_in_request(optional=True)
         return get_jwt_identity()
@@ -47,7 +46,6 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "fallback_secret_key_123
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=3)
 app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "super-secret-key") 
-# Critical config for OAuth callback origin validation
 app.config["FRONTEND_URL"] = os.environ.get("FRONTEND_URL", "http://127.0.0.1:5500") 
 
 # --- Email Configuration ---
@@ -68,7 +66,6 @@ os.makedirs(app.config['GENERATED_FOLDER'], exist_ok=True)
 
 # --- Database Path ---
 db_path = os.path.join("/tmp", "app.db")
-# Use environment variable for production DB or local fallback
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", f"sqlite:///{db_path}") 
 print(f"[INFO] Database path: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
@@ -89,7 +86,7 @@ bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 mail = Mail(app)
 oauth = OAuth(app)
-chat_histories = {} # In-memory chat history
+chat_histories = {} 
 
 # Configure initial CORS using flask_cors
 CORS(app,
@@ -101,7 +98,6 @@ CORS(app,
 @app.after_request
 def apply_cors(response):
     origin = request.headers.get("Origin")
-    # Dynamically build allowed origins from config and hardcoded defaults
     allowed = [
         app.config["FRONTEND_URL"].rstrip('/'),
         "https://creatorsai.ai",
@@ -109,28 +105,22 @@ def apply_cors(response):
         "http://127.0.0.1:5500",
         "http://localhost:5500",
     ]
-
-    # FIX: Handle OPTIONS preflight request explicitly (Crucial for the CORS error)
+    
+    # FIX: Handle OPTIONS preflight request explicitly (Crucial for CORS error)
     if request.method == 'OPTIONS':
-        # Must return 200/OK immediately with required headers
         if origin and origin in allowed:
             response.headers["Access-Control-Allow-Origin"] = origin
-        else:
-            # Allow the origin that sent the preflight, even if it's not strictly hardcoded, 
-            # if we trust the global CORS policy. For security, we stick to 'allowed'.
-            pass 
-
+        
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
         response.headers["Access-Control-Max-Age"] = "2592000"
         return response, 200
         
-    # If not preflight, proceed with origin check for the actual response
+    # Apply headers to regular responses
     if origin and origin in allowed:
         response.headers["Access-Control-Allow-Origin"] = origin
     
-    # Ensure standard headers are present on regular responses as well
     response.headers["Access-Control-Allow-Credentials"] = "true"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
@@ -147,21 +137,18 @@ oauth.register(
 )
 
 # ------------------------
-# Database Models
+# Database Models (remain the same)
 # ------------------------
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(255), nullable=True) # Nullable for social
+    password = db.Column(db.String(255), nullable=True) 
     searches = db.relationship('SearchHistory', backref='author', lazy=True)
     plan = db.Column(db.String(100), nullable=False, default='free')
     credits = db.Column(db.Integer, nullable=False, default=200)
-    
     is_verified = db.Column(db.Boolean, nullable=False, default=False)
     oauth_provider = db.Column(db.String(50), nullable=True)
     oauth_provider_id = db.Column(db.String(200), nullable=True)
-    
-    # Fields for OTP verification
     verification_otp = db.Column(db.String(255), nullable=True) 
     otp_expires_at = db.Column(db.DateTime, nullable=True)
 
@@ -185,16 +172,13 @@ class SearchHistory(db.Model):
             'timestamp': self.timestamp.isoformat()
         }
 # ------------------------
-# Create Tables
+# Create Tables & JWT Config (remain the same)
 # ------------------------
 with app.app_context():
     print("[INFO] Initializing database tables...")
     db.create_all()
     print("[INFO] Database tables initialized.")
 
-# ------------------------
-# JWT Config
-# ------------------------
 @jwt.user_lookup_loader
 def user_lookup_callback(_jwt_header, jwt_data):
     identity = jwt_data["sub"]
@@ -203,9 +187,6 @@ def user_lookup_callback(_jwt_header, jwt_data):
     except (ValueError, TypeError):
         return None
 
-# ------------------------
-# Home Route
-# ------------------------
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({"message": "✅ CreatorsAI API is live!"})
@@ -213,7 +194,6 @@ def home():
 # ---------------------------------
 # AUTH FLOW: STEP 1 (Send OTP)
 # ---------------------------------
-# OPTIONS route is handled globally by @app.after_request
 @app.route("/auth/register/send-otp", methods=["POST"])
 def register_send_otp():
     data = request.get_json() or {}
@@ -225,22 +205,22 @@ def register_send_otp():
 
     user = User.query.filter_by(email=email).first()
     
-    # Block registration if a verified, password-based account already exists
+    # FIX: Check 1 (Existing verified user with password)
     if user and user.is_verified and user.password:
         return jsonify({"msg": "An account with this email already exists."}), 400
     
-    # Block registration if the email is linked to a social account, preventing password overwrite
+    # FIX: Check 2 (Existing verified user via social login)
     if user and user.oauth_provider and user.is_verified:
-        return jsonify({"msg": "An account with this email exists via social login. Please use the Google sign-in button."}), 400
+        return jsonify({"msg": "An account with this email already exists via social login. Please use the Google sign-in button."}), 400
 
-    # Generate 6-digit OTP
+    # Generate and hash OTP/Password
     otp = str(random.randint(100000, 999999))
     hashed_otp = bcrypt.generate_password_hash(otp).decode("utf-8")
     otp_expiration = datetime.utcnow() + timedelta(minutes=10)
     hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
 
     if user:
-        # User exists but is unverified (or only partial data exists). Update/resend OTP.
+        # User exists but is unverified. Update password/OTP.
         user.password = hashed_password
         user.verification_otp = hashed_otp
         user.otp_expires_at = otp_expiration
@@ -278,14 +258,15 @@ def register_send_otp():
         db.session.rollback()
         db.session.close()
         print(f"[ERROR] Failed to send email: {e}")
+        # Server-side email failure often causes network errors on the client
         return jsonify({"msg": "Could not send verification email. Please try again."}), 500
 
 # ------------------------------------
 # AUTH FLOW: STEP 2 (Verify OTP)
 # ------------------------------------
-# OPTIONS route is handled globally by @app.after_request
 @app.route("/auth/register/verify-otp", methods=["POST"])
 def register_verify_otp():
+    # ... (function body remains the same)
     data = request.get_json() or {}
     email = data.get("email")
     otp = data.get("otp")
@@ -310,13 +291,11 @@ def register_verify_otp():
     if not bcrypt.check_password_hash(user.verification_otp, otp):
         return jsonify({"msg": "Invalid OTP."}), 401
 
-    # --- Success! ---
     user.is_verified = True
     user.verification_otp = None 
     user.otp_expires_at = None
     db.session.commit()
     
-    # Log the user in by creating a token
     access_token = create_access_token(identity=str(user.id))
     
     user_info = {    
@@ -336,25 +315,22 @@ def register_verify_otp():
 # ----------------------------
 @app.route("/auth/login", methods=["POST"])
 def login():
+    # ... (function body remains the same)
     data = request.get_json()
     email = data.get("email")
     password = data.get("password")
 
     user = User.query.filter_by(email=email).first()
     
-    # Check 1: User exists
     if not user:
         return jsonify({"msg": "Invalid credentials"}), 401
     
-    # Check 2: User has a local password hash (i.e., didn't only sign up via social)
     if not user.password:
         return jsonify({"msg": "This account was created via social login. Please use the Google sign-in button."}), 401
 
-    # Check 3: Password verification
     if not bcrypt.check_password_hash(user.password, password):
         return jsonify({"msg": "Invalid credentials"}), 401
 
-    # Check 4: Verification status
     if not user.is_verified:
         return jsonify({"msg": "Please verify your email address before logging in."}), 401
 
@@ -375,13 +351,14 @@ def login():
 # ----------------------------
 @app.route('/auth/google/login')
 def google_login():
+    # ... (function body remains the same)
     redirect_uri = url_for('google_callback', _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
 @app.route('/auth/google/callback')
 def google_callback():
+    # ... (function body remains the same)
     try:
-        # 1. Authorize and get user info
         token = oauth.google.authorize_access_token()
         if not token or 'id_token' not in token:
             raise Exception("Google token response is invalid or missing ID token.")
@@ -410,7 +387,7 @@ def google_callback():
             # Case 2: Existing email/password user linking to Google for the first time
             user.oauth_provider = 'google'
             user.oauth_provider_id = user_google_id
-            user.is_verified = True # Google verifies the email
+            user.is_verified = True
             print(f"[INFO] Existing email user linked to Google: {user_email}")
         
         elif user and user.oauth_provider == 'google' and user.oauth_provider_id != user_google_id:
@@ -418,7 +395,6 @@ def google_callback():
              user.oauth_provider_id = user_google_id
              print(f"[INFO] Existing Google user ID updated: {user_email}")
         
-        # Case 4: Existing Google user logging in again (no extra changes needed)
         user.is_verified = True
             
         db.session.commit()
@@ -432,13 +408,12 @@ def google_callback():
             'access_token': access_token
         }
         
-        # 2. Post message back to the frontend
+        # Post message back to the frontend
         popup_response_script = f"""
         <html>
         <head>
           <title>Authenticating...</title>
           <script>
-            // Use the configured FRONTEND_URL as the target origin for postMessage
             const targetOrigin = '{app.config["FRONTEND_URL"]}'; 
             window.opener.postMessage({{
               type: 'auth_success',
@@ -456,7 +431,7 @@ def google_callback():
         print(f"[ERROR] Google OAuth failed: {e}")
         db.session.rollback()
         
-        # 3. Post error message back to the frontend
+        # Post error message back to the frontend
         popup_error_script = f"""
         <html>
         <head>
@@ -476,7 +451,6 @@ def google_callback():
         return render_template_string(popup_error_script), 500
     finally:
         db.session.close()
-
 
 # ------------------------
 # All other routes
@@ -810,3 +784,4 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
