@@ -505,11 +505,10 @@ USER QUESTION:
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=chat_prompt,
-            generation_config={
-                "temperature": temperature,
-                "max_output_tokens": 3000
-            }
+            temperature=temperature,
+            max_output_tokens=3000
         )
+
 
         # ✅ SAFE TEXT EXTRACTION FOR GEMINI v2.5
         if hasattr(response, "text"):
@@ -740,6 +739,7 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
