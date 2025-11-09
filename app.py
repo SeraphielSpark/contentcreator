@@ -26,7 +26,6 @@ from authlib.integrations.flask_client import OAuth
 from flask_mail import Mail, Message
 
 # CRITICAL FIX: Import the Client directly from the correct location
-# Note: Assuming 'google-genai' or 'google-genai-sdk' environment.
 from google.genai import Client as GenAIClient
 
 # ------------------------
@@ -52,7 +51,7 @@ app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=3)
 app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "super-secret-key") 
 app.config["FRONTEND_URL"] = os.environ.get("FRONTEND_URL", "http://127.0.0.1:5500") 
 
-# --- Email Configuration (Rely entirely on environment variables) ---
+# --- Email Configuration ---
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.googlemail.com')
 app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
@@ -79,7 +78,6 @@ MODEL_NAME = "gemini-2.5-flash-image"
 GOOGLE_API_KEY1 = os.environ.get("GEMINI")
 if not GOOGLE_API_KEY1:
     print("[FATAL ERROR] GEMINI (for Image API) is not set.")
-# API_URL remains for the image generation endpoint using requests, which is correct.
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={GOOGLE_API_KEY1}"
 
 # ------------------------
@@ -90,10 +88,21 @@ bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 mail = Mail(app)
 oauth = OAuth(app)
+# In-memory storage for chat history/context
 chat_histories = {} 
 
-# Use global CORS configuration 
-CORS(app) 
+# UNIVERSAL CORS FIX: Apply the widest CORS possible using the core config.
+CORS(app, 
+    supports_credentials=True, 
+    resources={r"/*": {"origins": [
+        "https://www.creatorsai.ai",
+        "https://creatorsai.ai",
+        "http://127.0.0.1:5500",
+        "http://localhost:5500",
+        os.environ.get("FRONTEND_URL", "*") 
+    ]}}
+)
+# Note: The @cross_origin decorators are now technically redundant but kept for maximum safety.
 
 # Configure Google OAuth
 oauth.register(
@@ -105,7 +114,7 @@ oauth.register(
 )
 
 # ------------------------
-# Database Models (omitted for brevity, no changes)
+# Database Models 
 # ------------------------
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -140,7 +149,7 @@ class SearchHistory(db.Model):
             'timestamp': self.timestamp.isoformat()
         }
 # ------------------------
-# Create Tables & JWT Config (no changes)
+# Create Tables & JWT Config 
 # ------------------------
 with app.app_context():
     print("[INFO] Initializing database tables...")
@@ -165,7 +174,6 @@ def home():
 @app.route("/auth/register/send-otp", methods=["POST"]) 
 @cross_origin() 
 def register_send_otp():
-    # ... (Authentication logic remains the same)
     data = request.get_json() or {}
     email = data.get("email")
     password = data.get("password")
@@ -208,10 +216,11 @@ def register_send_otp():
         db.session.rollback()
         db.session.close()
         print(f"[FATAL ERROR] Failed to send email via SMTP: {e}")
+        # Return 500 status code on critical email failure
         return jsonify({"msg": "Could not send verification email. Please check server logs for SMTP error."}), 500
 
 # ------------------------------------
-# AUTH FLOW: STEP 2 (Verify OTP) (omitted for brevity, no changes)
+# AUTH FLOW: STEP 2 (Verify OTP)
 # ------------------------------------
 @app.route("/auth/register/verify-otp", methods=["POST"])
 @cross_origin()
@@ -232,7 +241,7 @@ def register_verify_otp():
     return jsonify(user_info), 200
 
 # ----------------------------
-# Email Login endpoint (omitted for brevity, no changes)
+# Email Login endpoint
 # ----------------------------
 @app.route("/auth/login", methods=["POST"])
 @cross_origin()
@@ -250,7 +259,7 @@ def login():
     return jsonify(user_info), 200
 
 # ----------------------------
-# Social Login Routes (omitted for brevity, no changes)
+# Social Login Routes
 # ----------------------------
 @app.route('/auth/google/login')
 def google_login():
@@ -271,11 +280,12 @@ def google_callback():
         user.is_verified = True; db.session.commit()
         access_token = create_access_token(identity=str(user.id))
         user_data = { "id": user.id, "email": user.email, "plan": user.plan, "credits": user.credits, 'access_token': access_token }
-        popup_response_script = f"""<html>...<script>const targetOrigin = '{app.config["FRONTEND_URL"]}'; window.opener.postMessage({{ type: 'auth_success', payload: {json.dumps(user_data)} }}, targetOrigin); window.close();</script>...</html>"""
+        # The correct FRONTEND_URL is used here for postMessage security
+        popup_response_script = f"""<html><head><title>Authenticating...</title><script>const targetOrigin = '{app.config["FRONTEND_URL"]}'; window.opener.postMessage({{ type: 'auth_success', payload: {json.dumps(user_data)} }}, targetOrigin); window.close();</script></head><body>Success! Logging you in...</body></html>"""
         return render_template_string(popup_response_script)
     except Exception as e:
         print(f"[ERROR] Google OAuth failed: {e}"); db.session.rollback()
-        popup_error_script = f"""<html>...<script>const targetOrigin = '{app.config["FRONTEND_URL"]}'; window.opener.postMessage({{ type: 'auth_error', payload: {{ "msg": "Social login failed. Please try again." }} }}, targetOrigin); window.close();</script>...</html>"""
+        popup_error_script = f"""<html><head><title>Error</title><script>const targetOrigin = '{app.config["FRONTEND_URL"]}'; window.opener.postMessage({{ type: 'auth_error', payload: {{ "msg": "Social login failed. Please try again." }} }}, targetOrigin); window.close();</script></head><body>Error. Please try again.</body></html>"""
         return render_template_string(popup_error_script), 500
     finally:
         db.session.close()
@@ -284,7 +294,7 @@ def google_callback():
 # All other routes
 # ------------------------
 
-# FIX: Use GenAIClient
+# Conversation History and Context Management
 @app.route("/generate", methods=["POST"])
 @cross_origin()
 def generate():
@@ -300,7 +310,6 @@ def generate():
             print("[FATAL ERROR] GOOGLE_API_KEY is not set. Please add it in Render Environment Variables.")
             return jsonify({"error": "API Key not configured"}), 500
         
-        # FIX: Instantiate the imported GenAIClient
         client = GenAIClient(api_key=GOOGLE_API_KEY) 
         
         response = client.models.generate_content(model="gemini-2.5-flash", contents=chat_prompt)
@@ -315,7 +324,6 @@ def generate():
         return jsonify({"error": str(e)}), 500
 
 
-# FIX: Use GenAIClient
 @app.route("/respond", methods=["POST"])
 @cross_origin()
 def respond():
@@ -325,23 +333,45 @@ def respond():
     chat_id = data.get("chat_id")
     if not prompt_content: return jsonify({"error": "No prompt content provided"}), 400
     
+    # 1. Manages and creates chat context using the in-memory chat_histories dictionary
     if not chat_id: chat_id = str(uuid.uuid4()); chat_histories[chat_id] = []
     chat_histories.setdefault(chat_id, [])
+    
+    # Append user's message
     chat_histories[chat_id].append({"role": "user", "text": prompt_content})
+    
+    # Create conversation history string for the model (maintaining context)
     history_text = "\n".join([f"{'USER' if msg['role'] == 'user' else 'AI'}: {msg['text']}" for msg in chat_histories[chat_id]])
-    chat_prompt = f"You are CreatorsAI — precise, concise, and friendly...\nCONVERSATION HISTORY:\n{history_text}\nUSER QUESTION:\n\"{prompt_content}\""
+    
+    # 2. Construct the prompt with the full history
+    chat_prompt = f"""
+You are CreatorsAI — precise, concise, and friendly.
+
+TASK:
+- Respond naturally in Markdown (use headings, bold, lists, paragraphs)
+- Keep each response within {max_sentences} sentences
+- Based on the CONVERSATION HISTORY, understand the continuity and context of the user's question.
+
+CONVERSATION HISTORY:
+{history_text}
+
+USER QUESTION:
+"{prompt_content}"
+"""
     
     try:
         GEMINI_API_KEY = os.environ.get("GEMINI")
         if not GEMINI_API_KEY: raise RuntimeError("GEMINI API key is not set in environment variables.")
         
-        # FIX: Instantiate the imported GenAIClient
         client = GenAIClient(api_key=GEMINI_API_KEY) 
         
         response = client.models.generate_content(model="gemini-2.5-flash", contents=[chat_prompt])
         result_text = response.text.strip() if response.text else ""
+        
+        # Append AI's response to maintain continuity
         chat_histories[chat_id].append({"role": "ai", "text": result_text})
-        return jsonify({"result": result_text, "meta": {"chat_id": chat_id, "max_sentences": max_sentences}}), 200 # Added 200 for clarity
+        
+        return jsonify({"result": result_text, "meta": {"chat_id": chat_id, "max_sentences": max_sentences}}), 200 
     except Exception as e:
         print(f"[ERROR] /respond: {e}")
         return jsonify({"error": str(e)}), 500
@@ -405,15 +435,34 @@ def generate_image():
             img.thumbnail((1024, 1024))
             img.convert("RGB").save(buffer, format="JPEG", quality=90)
             img_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
-        # --- Prompt building ---
-        prompt = (f"You are {artist}.\n..." + f"The desired category is: **{category}**.\n..." + f"**Repeat: Keep the subject's original face and identity perfectly recognizable.**")
+        
+        prompt = (
+            f"You are {artist}.\n"
+            f"Your task is to transform the person in the reference photo according to the user's request. "
+            f"**The most important rule is to strictly maintain their exact face, features, expression, and identity. DO NOT change their face.**\n\n"
+            f"--- Main Category ---\n"
+            f"The desired category is: **{category}**.\n\n"
+            f"--- Main Theme ---\n"
+            f"The desired theme is: **{theme}**.\n\n"
+            f"--- Desired Look ---\n"
+            f"The final image must have a **{look}** look.\n\n"
+            f"--- Color & Tone ---\n"
+            f"Apply this specific color grade and mood: **{color_tone}**.\n\n"
+            f"--- Image Usage ---\n"
+            f"The image will be used for: **{usage}**.\n\n"
+            + (f"--- Additional User Instructions ---\n{custom_prompt}\n\n" if custom_prompt else "") +
+            f"--- Final Instruction ---\n"
+            f"Combine all elements. Change the clothing and background to be 100% appropriate for the **{theme}** and **{look}**. "
+            f"**Repeat: Keep the subject's original face and identity perfectly recognizable.**"
+        )
+
         payload = {"contents": [{"parts": [{"text": prompt}, {"inline_data": {"mime_type": "image/jpeg", "data": img_base64}}]}]}
         headers = {"Content-Type": "application/json"}
-        # This is where the external Gemini API call occurs
+        
         response = requests.post(API_URL, headers=headers, json=payload, timeout=(10, 180))
         if response.status_code != 200: return jsonify({"error": f"Gemini API returned {response.status_code}", "details": response.text}), response.status_code
         result = response.json()
-        # --- Image processing/saving ---
+        
         gen_b64 = next((part.get("inline_data", {}).get("data") for part in result.get("candidates", [])[0].get("content", {}).get("parts", []) if "inline_data" in part), None)
         if not gen_b64: return jsonify({"error": "Gemini returned no image data"}), 400
         generated_filename = f"gen_{int(time.time())}_{secure_filename(theme.split(' ')[0])}.jpg"
