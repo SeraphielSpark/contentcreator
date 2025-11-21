@@ -1,0 +1,2049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olympian Game - Zeus Adventure</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        body {
+            background: linear-gradient(to bottom, #1a2a6c, #3a7bd5);
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            max-width: 1000px;
+            height: 600px;
+            margin: 0 auto;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(to bottom, #87CEEB, #3a7bd5);
+            cursor: crosshair;
+        }
+        
+        #uiOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        #healthBar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 200px;
+            height: 25px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #fff;
+        }
+        
+        #healthFill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(to right, #ff416c, #ff4b2b);
+            transition: width 0.3s;
+        }
+        
+        #manaBar {
+            position: absolute;
+            top: 55px;
+            left: 20px;
+            width: 200px;
+            height: 25px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #fff;
+        }
+        
+        #manaFill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(to right, #4A00E0, #8E2DE2);
+            transition: width 0.3s;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        #controls h3 {
+            margin-bottom: 8px;
+            font-size: 16px;
+            color: #FFD700;
+        }
+        
+        #controls p {
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        
+        #objective {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            max-width: 300px;
+        }
+        
+        #objective h3 {
+            margin-bottom: 10px;
+            font-size: 16px;
+            color: #FFD700;
+        }
+        
+        #objective p {
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        #dialogBox {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #FFD700;
+            text-align: center;
+            display: none;
+            pointer-events: auto;
+            z-index: 100;
+        }
+        
+        #dialogText {
+            font-size: 18px;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        
+        #dialogButton {
+            background: linear-gradient(to right, #FFD700, #FFA500);
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            pointer-events: auto;
+        }
+        
+        #dialogButton:hover {
+            transform: scale(1.05);
+        }
+        
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(26, 42, 108, 0.9), rgba(58, 123, 213, 0.9));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            pointer-events: auto;
+        }
+        
+        #title {
+            font-size: 60px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+            color: #FFD700;
+            text-align: center;
+        }
+        
+        #subtitle {
+            font-size: 24px;
+            margin-bottom: 40px;
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.5;
+        }
+        
+        #startButton {
+            background: linear-gradient(to right, #FFD700, #FFA500);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            color: #000;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        #startButton:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        #abilities {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 15px;
+            pointer-events: auto;
+        }
+        
+        .ability {
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+            pointer-events: auto;
+        }
+        
+        .ability:hover {
+            transform: scale(1.1);
+            border-color: #FFD700;
+        }
+        
+        .ability-icon {
+            font-size: 24px;
+            color: #FFD700;
+        }
+        
+        .ability.cooldown {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        #levelIndicator {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        #score {
+            position: absolute;
+            top: 90px;
+            left: 20px;
+            font-size: 18px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+        
+        .burning {
+            animation: burn 1s infinite;
+        }
+        
+        @keyframes burn {
+            0% { background-color: #FF4500; }
+            50% { background-color: #FFD700; }
+            100% { background-color: #FF4500; }
+        }
+        
+        .season-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 40px;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px 40px;
+            border-radius: 10px;
+            border: 3px solid #FFD700;
+            display: none;
+            z-index: 50;
+        }
+        
+        .death-effect {
+            animation: fadeOut 1.5s forwards;
+        }
+        
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: translateY(50px) scale(0.5);
+            }
+        }
+        
+        .lightning-strike {
+            position: absolute;
+            width: 5px;
+            background: linear-gradient(to bottom, #FFFFFF, #FFD700, #4A00E0);
+            box-shadow: 0 0 10px #FFD700, 0 0 20px #4A00E0;
+            z-index: 5;
+            animation: lightningFlash 0.2s;
+        }
+        
+        @keyframes lightningFlash {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        .thunder-rain {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 4;
+        }
+        
+        .rain-drop {
+            position: absolute;
+            width: 2px;
+            height: 15px;
+            background: linear-gradient(to bottom, transparent, #1E90FF);
+            animation: rainFall 1s linear infinite;
+        }
+        
+        @keyframes rainFall {
+            to {
+                transform: translateY(600px);
+            }
+        }
+        
+        /* Mobile Controls - Redesigned with Mini Joystick */
+        #mobileControls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            height: 180px;
+            display: none;
+            pointer-events: auto;
+            z-index: 15;
+            padding: 0 20px;
+        }
+        
+        #joystickContainer {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 120px;
+            height: 120px;
+            background: rgba(30, 30, 30, 0.7);
+            border-radius: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            border: 3px solid rgba(100, 100, 100, 0.7);
+        }
+        
+        #joystick {
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, rgba(100, 100, 100, 0.9), rgba(60, 60, 60, 0.9));
+            border-radius: 50%;
+            position: absolute;
+            cursor: move;
+            touch-action: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(150, 150, 150, 0.5);
+        }
+        
+        #actionButtons {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 160px;
+            height: 160px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .actionButton {
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle, rgba(220, 0, 0, 0.9), rgba(180, 0, 0, 0.9));
+            border: 3px solid rgba(255, 100, 100, 0.8);
+            border-radius: 50%;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 5px;
+            transition: all 0.1s;
+            touch-action: manipulation;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .actionButton:active {
+            background: radial-gradient(circle, rgba(255, 50, 50, 0.9), rgba(220, 0, 0, 0.9));
+            transform: scale(0.95);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+        }
+        
+        #mobileAbilityButtons {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: auto;
+        }
+        
+        .mobileAbility {
+            width: 55px;
+            height: 55px;
+            background: rgba(30, 30, 30, 0.8);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(100, 100, 100, 0.7);
+            touch-action: manipulation;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: all 0.1s;
+        }
+        
+        .mobileAbility:active {
+            background: rgba(255, 215, 0, 0.3);
+            transform: scale(0.95);
+        }
+        
+        .mobileAbility.cooldown {
+            opacity: 0.5;
+        }
+        
+        #rotateMessage {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            text-align: center;
+        }
+        
+        #rotateIcon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: rotate 2s infinite linear;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        #rotateText {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        #rotateSubtext {
+            font-size: 16px;
+            opacity: 0.8;
+        }
+        
+        /* Story Intro Screen */
+        #storyIntro {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 25;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        #storyContent {
+            max-width: 800px;
+            font-size: 22px;
+            line-height: 1.6;
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+        
+        #storyTitle {
+            font-size: 48px;
+            margin-bottom: 30px;
+            color: #FFD700;
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
+        }
+        
+        #continueStory {
+            background: linear-gradient(to right, #FFD700, #FFA500);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            color: #000;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        #continueStory:hover {
+            transform: scale(1.05);
+        }
+        
+        /* Level Complete Screen */
+        #levelComplete {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 30;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        #levelCompleteTitle {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #FFD700;
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
+        }
+        
+        #levelCompleteText {
+            font-size: 22px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            max-width: 800px;
+        }
+        
+        #nextLevelButton {
+            background: linear-gradient(to right, #FFD700, #FFA500);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            color: #000;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        #nextLevelButton:hover {
+            transform: scale(1.05);
+        }
+        
+        /* Mobile-specific styles */
+        @media (max-width: 768px) {
+            #gameContainer {
+                width: 100%;
+                height: 100vh;
+                max-width: none;
+                border-radius: 0;
+            }
+            
+            #gameCanvas {
+                width: 100%;
+                height: 100%;
+            }
+            
+            #controls {
+                display: none;
+            }
+            
+            #abilities {
+                display: none;
+            }
+            
+            #mobileControls {
+                display: flex;
+            }
+            
+            #mobileAbilityButtons {
+                display: flex;
+            }
+            
+            #objective {
+                max-width: 200px;
+                font-size: 12px;
+            }
+            
+            #healthBar, #manaBar {
+                width: 150px;
+            }
+            
+            #storyContent, #levelCompleteText {
+                font-size: 18px;
+                padding: 20px;
+            }
+            
+            #storyTitle, #levelCompleteTitle {
+                font-size: 36px;
+            }
+        }
+        
+        @media (max-height: 500px) and (orientation: landscape) {
+            #rotateMessage {
+                display: flex;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="1000" height="600"></canvas>
+        
+        <div id="uiOverlay">
+            <div id="healthBar">
+                <div id="healthFill"></div>
+            </div>
+            <div id="manaBar">
+                <div id="manaFill"></div>
+            </div>
+            
+            <div id="score">Score: 0</div>
+            
+            <div id="levelIndicator">Level 1: Spring of Beginnings</div>
+            
+            <div id="controls">
+                <h3>Controls</h3>
+                <p>WASD / Arrow Keys: Move</p>
+                <p>Mouse Click: Cast Lightning</p>
+                <p>Space: Jump</p>
+                <p>Q: Thunder Clap (Stun)</p>
+                <p>E: Divine Shield</p>
+                <p>R: Chain Lightning</p>
+                <p>F: Thunder Rain</p>
+            </div>
+            
+            <div id="objective">
+                <h3>Current Objective</h3>
+                <p id="objectiveText">Defeat the Titans and restore order to Olympus!</p>
+            </div>
+            
+            <div id="abilities">
+                <div class="ability" id="lightningAbility">
+                    <div class="ability-icon">⚡</div>
+                </div>
+                <div class="ability" id="thunderAbility">
+                    <div class="ability-icon">🌩️</div>
+                </div>
+                <div class="ability" id="shieldAbility">
+                    <div class="ability-icon">🛡️</div>
+                </div>
+                <div class="ability" id="chainAbility">
+                    <div class="ability-icon">🔗</div>
+                </div>
+                <div class="ability" id="rainAbility">
+                    <div class="ability-icon">🌧️</div>
+                </div>
+            </div>
+            
+            <!-- Mobile Controls -->
+            <div id="mobileControls">
+                <div id="joystickContainer">
+                    <div id="joystick"></div>
+                </div>
+                <div id="actionButtons">
+                    <button class="actionButton" id="attackButton">ATTACK</button>
+                    <button class="actionButton" id="jumpButton">JUMP</button>
+                    <button class="actionButton" id="specialButton">SPECIAL</button>
+                </div>
+            </div>
+            
+            <div id="mobileAbilityButtons">
+                <div class="mobileAbility" id="mobileLightning">
+                    <div class="ability-icon">⚡</div>
+                </div>
+                <div class="mobileAbility" id="mobileThunder">
+                    <div class="ability-icon">🌩️</div>
+                </div>
+                <div class="mobileAbility" id="mobileShield">
+                    <div class="ability-icon">🛡️</div>
+                </div>
+                <div class="mobileAbility" id="mobileChain">
+                    <div class="ability-icon">🔗</div>
+                </div>
+                <div class="mobileAbility" id="mobileRain">
+                    <div class="ability-icon">🌧️</div>
+                </div>
+            </div>
+            
+            <div id="dialogBox">
+                <p id="dialogText">Welcome, Zeus! The mortal realm is in chaos. Titans have escaped and are wreaking havoc. Use your divine powers to defeat them and restore order!</p>
+                <button id="dialogButton">Continue</button>
+            </div>
+            
+            <div id="seasonIndicator" class="season-indicator"></div>
+        </div>
+        
+        <div id="startScreen">
+            <h1 id="title">OLYMPIAN GAME</h1>
+            <p id="subtitle">Take on the role of Zeus, King of the Gods, and battle through 30 levels to restore peace to the mortal realm and Olympus.</p>
+            <button id="startButton">BEGIN QUEST</button>
+        </div>
+        
+        <div id="storyIntro">
+            <h1 id="storyTitle">The Rise of Zeus</h1>
+            <div id="storyContent">
+                <p>In the beginning, the world was ruled by the Titans, ancient and powerful beings who held dominion over the cosmos.</p>
+                <p>But Cronus, the Titan King, feared a prophecy that one of his children would overthrow him. So he devoured each of them at birth.</p>
+                <p>All except one - Zeus. Hidden away on the island of Crete, he grew in power and wisdom.</p>
+                <p>Now grown, Zeus has returned to challenge the Titans and free his siblings from their eternal prison within Cronus.</p>
+                <p>The fate of Olympus rests in your hands. Wield the power of lightning and thunder to restore balance to the world!</p>
+            </div>
+            <button id="continueStory">Begin Your Quest</button>
+        </div>
+        
+        <div id="levelComplete">
+            <h1 id="levelCompleteTitle">Level Complete!</h1>
+            <div id="levelCompleteText">
+                <p>You have successfully completed this level and proven your worth as the King of Gods!</p>
+                <p>Prepare yourself for the next challenge that awaits in your quest to restore order to Olympus.</p>
+            </div>
+            <button id="nextLevelButton">Continue to Next Level</button>
+        </div>
+        
+        <div id="rotateMessage">
+            <div id="rotateIcon">🔄</div>
+            <div id="rotateText">Please Rotate Your Device</div>
+            <div id="rotateSubtext">For the best experience, please rotate your device to landscape mode</div>
+        </div>
+    </div>
+
+    <script>
+        // Game Elements
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('startScreen');
+        const startButton = document.getElementById('startButton');
+        const dialogBox = document.getElementById('dialogBox');
+        const dialogText = document.getElementById('dialogText');
+        const dialogButton = document.getElementById('dialogButton');
+        const healthFill = document.getElementById('healthFill');
+        const manaFill = document.getElementById('manaFill');
+        const objectiveText = document.getElementById('objectiveText');
+        const scoreElement = document.getElementById('score');
+        const levelIndicator = document.getElementById('levelIndicator');
+        const seasonIndicator = document.getElementById('seasonIndicator');
+        const rotateMessage = document.getElementById('rotateMessage');
+        const storyIntro = document.getElementById('storyIntro');
+        const continueStory = document.getElementById('continueStory');
+        const levelComplete = document.getElementById('levelComplete');
+        const levelCompleteText = document.getElementById('levelCompleteText');
+        const nextLevelButton = document.getElementById('nextLevelButton');
+
+        // Mobile Control Elements
+        const joystick = document.getElementById('joystick');
+        const joystickContainer = document.getElementById('joystickContainer');
+        const attackButton = document.getElementById('attackButton');
+        const jumpButton = document.getElementById('jumpButton');
+        const specialButton = document.getElementById('specialButton');
+        const mobileLightning = document.getElementById('mobileLightning');
+        const mobileThunder = document.getElementById('mobileThunder');
+        const mobileShield = document.getElementById('mobileShield');
+        const mobileChain = document.getElementById('mobileChain');
+        const mobileRain = document.getElementById('mobileRain');
+
+        // Check if mobile device
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        // Game State
+        let gameStarted = false;
+        let currentLevel = 1;
+        let playerHealth = 100;
+        let playerMana = 100;
+        let score = 0;
+        let enemies = [];
+        let lightningBolts = [];
+        let homingLightning = [];
+        let collectibles = [];
+        let platforms = [];
+        let obstacles = [];
+        let movingObstacles = [];
+        let dialogActive = false;
+        let currentDialog = 0;
+        let abilityCooldowns = {
+            lightning: 0,
+            thunder: 0,
+            shield: 0,
+            chain: 0,
+            rain: 0
+        };
+        let thunderRainActive = false;
+        let thunderRainDuration = 0;
+        let rainDrops = [];
+        
+        // Mobile control state
+        let mobileControls = {
+            left: false,
+            right: false,
+            up: false,
+            down: false,
+            jump: false,
+            attack: false,
+            special: false
+        };
+
+        // Level data - 30 different levels with unique backgrounds
+        const levels = [
+            { 
+                name: "Spring of Beginnings", 
+                background:"background1.jpg", //"https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+                enemies: 8, 
+                collectibles: 5,
+                story: "You begin your journey in the lush fields of the mortal realm. The Titans have begun their assault, and you must gather your power to face them."
+            },
+            { 
+                name: "Summer of Growth", 
+                background: "background2.jpg", //"https://images.unsplash.com/photo-1505142468610-359e7d316be0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+                enemies: 12, 
+                collectibles: 6,
+                story: "The heat of battle intensifies as you venture deeper into Titan territory. Your powers grow with each victory."
+            },
+            { 
+                name: "Autumn of Harvest", 
+                background: "background3.jpg", //"https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+                enemies: 16, 
+                collectibles: 7,
+                story: "The fallen leaves mark the passing of your enemies. But greater challenges await as you approach the Titan stronghold."
+            },
+            { 
+                name: "Winter of Trials", 
+                background:"background4.jpg", // "https://images.unsplash.com/photo-1518837695005-2083093ee35b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+                enemies: 20, 
+                collectibles: 8,
+                story: "The cold winds of the northern realms test your resolve. The Titans grow desperate as you near their fortress."
+            },
+            { 
+                name: "Season of Storms", 
+                background:"background5.jpg", // "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+                enemies: 25, 
+                collectibles: 9,
+                story: "Lightning cracks across the sky as you unleash your full power. The Titans tremble before the might of Olympus."
+            },
+            // Add more levels with unique backgrounds and stories...
+        ];
+
+        // Fill the remaining levels with placeholder data
+        for (let i = 6; i <= 30; i++) {
+            levels.push({
+                name: `Level ${i}: The Titan's Challenge`,
+                background: `https://picsum.photos/1000/600?random=${i}`,
+                enemies: 20 + i * 2,
+                collectibles: 5 + i,
+                story: `Your journey continues as you face ever greater challenges. Level ${i} brings new trials and stronger enemies. Prove your worth as the King of Gods!`
+            });
+        }
+
+        // Game Variables
+        const gravity = 0.5;
+        const keys = {};
+        let camera = { x: 0, y: 0 };
+        let targetPos = null;
+        let backgroundImages = {};
+        let characterImage = new Image();
+        let enemyImage = new Image();
+        let bossImage = new Image();
+
+        // Load images
+        characterImage.src = 'zeus.png'; // Placeholder for Zeus
+        enemyImage.src = 'enemy.png'; // Placeholder for enemy
+        bossImage.src = 'enemy.png'; // Placeholder for boss
+
+        // Create background images for levels
+        for (let i = 0; i < levels.length; i++) {
+            backgroundImages[i+1] = new Image();
+            backgroundImages[i+1].src = levels[i].background;
+        }
+
+        // Player Class
+        class Player {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 60;
+                this.height = 100;
+                this.velX = 0;
+                this.velY = 0;
+                this.speed = 5;
+                this.jumpPower = 15;
+                this.onGround = false;
+                this.facing = 1; // 1 = right, -1 = left
+                this.attacking = false;
+                this.attackCooldown = 0;
+                this.shieldActive = false;
+                this.shieldDuration = 0;
+                this.chainLightningActive = false;
+                this.chainLightningDuration = 0;
+            }
+
+            update() {
+                // Apply gravity
+                this.velY += gravity;
+                
+                // Handle input - keyboard and mobile
+                let moving = false;
+                
+                if (keys['ArrowLeft'] || keys['KeyA'] || mobileControls.left) {
+                    this.velX = -this.speed;
+                    this.facing = -1;
+                    moving = true;
+                } 
+                if (keys['ArrowRight'] || keys['KeyD'] || mobileControls.right) {
+                    this.velX = this.speed;
+                    this.facing = 1;
+                    moving = true;
+                }
+                
+                if (!moving) {
+                    this.velX = 0;
+                }
+                
+                // Jumping
+                if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW'] || mobileControls.jump) && this.onGround) {
+                    this.velY = -this.jumpPower;
+                    this.onGround = false;
+                    // Reset jump button state
+                    mobileControls.jump = false;
+                }
+                
+                // Update position
+                this.x += this.velX;
+                this.y += this.velY;
+                
+                // Platform collision
+                let onPlatform = false;
+                for (let platform of platforms) {
+                    if (this.x + this.width > platform.x && 
+                        this.x < platform.x + platform.width &&
+                        this.y + this.height > platform.y && 
+                        this.y + this.height < platform.y + 20 &&
+                        this.velY > 0) {
+                        
+                        this.y = platform.y - this.height;
+                        this.velY = 0;
+                        this.onGround = true;
+                        onPlatform = true;
+                        break;
+                    }
+                }
+                
+                // Ground collision
+                if (!onPlatform && this.y + this.height > 500) {
+                    this.y = 500 - this.height;
+                    this.velY = 0;
+                    this.onGround = true;
+                } else if (!onPlatform) {
+                    this.onGround = false;
+                }
+                
+                // Boundary checks
+                if (this.x < 0) this.x = 0;
+                if (this.x > 3000 - this.width) this.x = 3000 - this.width;
+                
+                // Attack cooldown
+                if (this.attackCooldown > 0) this.attackCooldown--;
+                
+                // Shield duration
+                if (this.shieldActive) {
+                    this.shieldDuration--;
+                    if (this.shieldDuration <= 0) {
+                        this.shieldActive = false;
+                    }
+                }
+                
+                // Chain lightning duration
+                if (this.chainLightningActive) {
+                    this.chainLightningDuration--;
+                    if (this.chainLightningDuration <= 0) {
+                        this.chainLightningActive = false;
+                    }
+                }
+                
+                // Handle mobile attack
+                if (mobileControls.attack) {
+                    this.attack();
+                    mobileControls.attack = false;
+                }
+                
+                // Handle mobile special
+                if (mobileControls.special) {
+                    this.thunderRain();
+                    mobileControls.special = false;
+                }
+            }
+
+            draw() {
+                // Draw player (using image if loaded, otherwise fallback)
+                if (characterImage.complete) {
+                    ctx.save();
+                    ctx.translate(this.x - camera.x + this.width/2, this.y - camera.y + this.height/2);
+                    ctx.scale(this.facing, 1);
+                    ctx.drawImage(characterImage, -this.width/2, -this.height/2, this.width, this.height);
+                    ctx.restore();
+                } else {
+                    // Fallback drawing
+                    ctx.fillStyle = this.shieldActive ? 'rgba(255, 215, 0, 0.7)' : '#1E3A8A';
+                    ctx.fillRect(this.x - camera.x, this.y - camera.y, this.width, this.height);
+                    
+                    ctx.fillStyle = '#FFD700';
+                    ctx.beginPath();
+                    ctx.arc(this.x - camera.x + this.width/2, this.y - camera.y - 10, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Draw lightning bolt if attacking
+                if (this.attacking) {
+                    ctx.fillStyle = '#FFD700';
+                    ctx.beginPath();
+                    if (this.facing === 1) {
+                        ctx.moveTo(this.x - camera.x + this.width, this.y - camera.y + this.height/2);
+                        ctx.lineTo(this.x - camera.x + this.width + 40, this.y - camera.y + this.height/2 - 20);
+                        ctx.lineTo(this.x - camera.x + this.width + 20, this.y - camera.y + this.height/2);
+                        ctx.lineTo(this.x - camera.x + this.width + 50, this.y - camera.y + this.height/2 + 20);
+                    } else {
+                        ctx.moveTo(this.x - camera.x, this.y - camera.y + this.height/2);
+                        ctx.lineTo(this.x - camera.x - 40, this.y - camera.y + this.height/2 - 20);
+                        ctx.lineTo(this.x - camera.x - 20, this.y - camera.y + this.height/2);
+                        ctx.lineTo(this.x - camera.x - 50, this.y - camera.y + this.height/2 + 20);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                
+                // Draw shield effect
+                if (this.shieldActive) {
+                    ctx.strokeStyle = '#FFD700';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(this.x - camera.x + this.width/2, this.y - camera.y + this.height/2, 70, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                
+                // Draw chain lightning effect
+                if (this.chainLightningActive) {
+                    ctx.strokeStyle = '#4A00E0';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(this.x - camera.x + this.width/2, this.y - camera.y + this.height/2, 60, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+            
+            attack() {
+                if (this.attackCooldown === 0 && playerMana >= 10) {
+                    this.attacking = true;
+                    this.attackCooldown = 20;
+                    
+                    // Create homing lightning
+                    if (enemies.length > 0) {
+                        // Find closest enemy
+                        let closestEnemy = null;
+                        let minDistance = Infinity;
+                        
+                        enemies.forEach(enemy => {
+                            const dx = enemy.x - this.x;
+                            const dy = enemy.y - this.y;
+                            const distance = Math.sqrt(dx*dx + dy*dy);
+                            
+                            if (distance < minDistance) {
+                                minDistance = distance;
+                                closestEnemy = enemy;
+                            }
+                        });
+                        
+                        if (closestEnemy) {
+                            homingLightning.push(new HomingLightning(
+                                this.x + this.width/2, 
+                                this.y + this.height/2, 
+                                closestEnemy
+                            ));
+                        }
+                    }
+                    
+                    // Use mana
+                    playerMana = Math.max(0, playerMana - 10);
+                    updateUI();
+                    
+                    setTimeout(() => {
+                        this.attacking = false;
+                    }, 200);
+                }
+            }
+            
+            thunderClap() {
+                if (playerMana >= 20 && abilityCooldowns.thunder === 0) {
+                    // Stun all enemies in range
+                    enemies.forEach(enemy => {
+                        const dx = enemy.x - (this.x + this.width/2);
+                        const dy = enemy.y - (this.y + this.height/2);
+                        const distance = Math.sqrt(dx*dx + dy*dy);
+                        
+                        if (distance < 200) {
+                            enemy.stun(60); // Stun for 60 frames
+                        }
+                    });
+                    
+                    // Use mana
+                    playerMana = Math.max(0, playerMana - 20);
+                    abilityCooldowns.thunder = 120; // 2 second cooldown
+                    updateUI();
+                    updateAbilityUI();
+                }
+            }
+            
+            activateShield() {
+                if (playerMana >= 30 && !this.shieldActive && abilityCooldowns.shield === 0) {
+                    this.shieldActive = true;
+                    this.shieldDuration = 180; // 3 seconds at 60 FPS
+                    
+                    // Use mana
+                    playerMana = Math.max(0, playerMana - 30);
+                    abilityCooldowns.shield = 300; // 5 second cooldown
+                    updateUI();
+                    updateAbilityUI();
+                }
+            }
+            
+            chainLightning() {
+                if (playerMana >= 40 && abilityCooldowns.chain === 0) {
+                    this.chainLightningActive = true;
+                    this.chainLightningDuration = 120; // 2 seconds
+                    
+                    // Damage all enemies in range
+                    enemies.forEach(enemy => {
+                        const dx = enemy.x - (this.x + this.width/2);
+                        const dy = enemy.y - (this.y + this.height/2);
+                        const distance = Math.sqrt(dx*dx + dy*dy);
+                        
+                        if (distance < 250) {
+                            if (enemy.takeDamage(15)) {
+                                score += enemy.type === 'minion' ? 100 : 500;
+                                updateUI();
+                            }
+                        }
+                    });
+                    
+                    // Use mana
+                    playerMana = Math.max(0, playerMana - 40);
+                    abilityCooldowns.chain = 180; // 3 second cooldown
+                    updateUI();
+                    updateAbilityUI();
+                }
+            }
+            
+            thunderRain() {
+                if (playerMana >= 50 && abilityCooldowns.rain === 0) {
+                    thunderRainActive = true;
+                    thunderRainDuration = 300; // 5 seconds
+                    
+                    // Create rain effect
+                    createRainEffect();
+                    
+                    // Use mana
+                    playerMana = Math.max(0, playerMana - 50);
+                    abilityCooldowns.rain = 600; // 10 second cooldown
+                    updateUI();
+                    updateAbilityUI();
+                }
+            }
+        }
+
+        // Enemy Class
+        class Enemy {
+            constructor(x, y, type = 'minion') {
+                this.x = x;
+                this.y = y;
+                this.width = 60;
+                this.height = 80;
+                this.velX = 0;
+                this.velY = 0;
+                this.speed = type === 'minion' ? 2 : 1;
+                this.health = type === 'minion' ? 30 : 100;
+                this.type = type;
+                this.attackCooldown = 0;
+                this.stunned = 0;
+                this.burning = 0;
+                this.isDying = false;
+                this.deathTimer = 0;
+            }
+            
+            update() {
+                if (this.isDying) {
+                    this.deathTimer--;
+                    if (this.deathTimer <= 0) {
+                        return false; // Remove enemy
+                    }
+                    return true; // Keep enemy for death animation
+                }
+                
+                if (this.stunned > 0) {
+                    this.stunned--;
+                    return true;
+                }
+                
+                // Simple AI: move toward player
+                const dx = player.x - this.x;
+                const dy = player.y - this.y;
+                const distance = Math.sqrt(dx*dx + dy*dy);
+                
+                if (distance < 300) {
+                    this.velX = (dx/distance) * this.speed;
+                } else {
+                    this.velX = 0;
+                }
+                
+                // Apply gravity
+                this.velY += gravity;
+                
+                // Update position
+                this.x += this.velX;
+                this.y += this.velY;
+                
+                // Platform collision for enemies
+                let onPlatform = false;
+                for (let platform of platforms) {
+                    if (this.x + this.width > platform.x && 
+                        this.x < platform.x + platform.width &&
+                        this.y + this.height > platform.y && 
+                        this.y + this.height < platform.y + 20 &&
+                        this.velY > 0) {
+                        
+                        this.y = platform.y - this.height;
+                        this.velY = 0;
+                        onPlatform = true;
+                        break;
+                    }
+                }
+                
+                // Ground collision
+                if (!onPlatform && this.y + this.height > 500) {
+                    this.y = 500 - this.height;
+                    this.velY = 0;
+                }
+                
+                // Attack cooldown
+                if (this.attackCooldown > 0) this.attackCooldown--;
+                
+                // Attack player if close
+                if (distance < 50 && this.attackCooldown === 0) {
+                    if (!player.shieldActive) {
+                        playerHealth = Math.max(0, playerHealth - 10);
+                        updateUI();
+                    }
+                    this.attackCooldown = 60;
+                }
+                
+                // Handle burning effect
+                if (this.burning > 0) {
+                    this.burning--;
+                    if (this.burning % 20 === 0) { // Damage every 20 frames
+                        this.takeDamage(5);
+                    }
+                }
+                
+                // Thunder rain damage
+                if (thunderRainActive && Math.random() < 0.02) {
+                    this.takeDamage(3);
+                }
+                
+                return true;
+            }
+            
+            draw() {
+                // Apply death effect
+                if (this.isDying) {
+                    ctx.globalAlpha = this.deathTimer / 90; // Fade out over 1.5 seconds
+                }
+                
+                // Draw enemy (using image if loaded, otherwise fallback)
+                if ((this.type === 'minion' && enemyImage.complete) || 
+                    (this.type === 'boss' && bossImage.complete)) {
+                    const img = this.type === 'minion' ? enemyImage : bossImage;
+                    ctx.drawImage(img, this.x - camera.x, this.y - camera.y, this.width, this.height);
+                } else {
+                    // Fallback drawing
+                    ctx.fillStyle = this.type === 'minion' ? '#8B0000' : '#4B0082';
+                    if (this.burning > 0) {
+                        ctx.fillStyle = '#FF4500';
+                    }
+                    ctx.fillRect(this.x - camera.x, this.y - camera.y, this.width, this.height);
+                    
+                    ctx.fillStyle = '#800020';
+                    ctx.beginPath();
+                    ctx.arc(this.x - camera.x + this.width/2, this.y - camera.y - 10, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Draw health bar
+                if (!this.isDying) {
+                    const barWidth = 60;
+                    const barHeight = 5;
+                    const healthPercent = this.health / (this.type === 'minion' ? 30 : 100);
+                    
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    ctx.fillRect(this.x - camera.x, this.y - camera.y - 15, barWidth, barHeight);
+                    
+                    ctx.fillStyle = healthPercent > 0.5 ? '#00FF00' : healthPercent > 0.2 ? '#FFFF00' : '#FF0000';
+                    ctx.fillRect(this.x - camera.x, this.y - camera.y - 15, barWidth * healthPercent, barHeight);
+                }
+                
+                // Stun effect
+                if (this.stunned > 0) {
+                    ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+                    ctx.fillRect(this.x - camera.x, this.y - camera.y, this.width, this.height);
+                }
+                
+                // Burning effect
+                if (this.burning > 0) {
+                    ctx.fillStyle = 'rgba(255, 69, 0, 0.5)';
+                    ctx.fillRect(this.x - camera.x, this.y - camera.y, this.width, this.height);
+                }
+                
+                // Reset alpha
+                ctx.globalAlpha = 1;
+            }
+            
+            stun(duration) {
+                this.stunned = duration;
+            }
+            
+            setOnFire(duration) {
+                this.burning = duration;
+            }
+            
+            takeDamage(amount) {
+                this.health -= amount;
+                if (this.health <= 0) {
+                    this.startDeath();
+                    score += this.type === 'minion' ? 100 : 500;
+                    return true;
+                }
+                return false;
+            }
+            
+            startDeath() {
+                this.isDying = true;
+                this.deathTimer = 90; // 1.5 seconds at 60 FPS
+            }
+        }
+
+        // Platform Class (for standing/walking on)
+        class Platform {
+            constructor(x, y, width, height) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+            }
+            
+            draw() {
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(this.x - camera.x, this.y - camera.y, this.width, this.height);
+                
+                // Add some texture
+                ctx.fillStyle = '#A0522D';
+                for (let i = 0; i < this.width; i += 20) {
+                    ctx.fillRect(this.x - camera.x + i, this.y - camera.y, 10, 5);
+                }
+            }
+        }
+
+        // Homing Lightning Class
+        class HomingLightning {
+            constructor(x, y, target) {
+                this.x = x;
+                this.y = y;
+                this.target = target;
+                this.speed = 8;
+                this.active = true;
+                this.trail = [];
+                this.maxTrail = 10;
+            }
+            
+            update() {
+                if (!this.target || !this.target.isDying) {
+                    // Move toward target
+                    const dx = this.target.x + this.target.width/2 - this.x;
+                    const dy = this.target.y + this.target.height/2 - this.y;
+                    const distance = Math.sqrt(dx*dx + dy*dy);
+                    
+                    if (distance < 10) {
+                        // Hit target
+                        if (this.target.takeDamage(15)) {
+                            score += this.target.type === 'minion' ? 100 : 500;
+                            updateUI();
+                        } else {
+                            this.target.setOnFire(60);
+                        }
+                        this.active = false;
+                        createLightningStrike(this.target.x + this.target.width/2, this.target.y);
+                        return;
+                    }
+                    
+                    // Normalize direction and move
+                    this.x += (dx/distance) * this.speed;
+                    this.y += (dy/distance) * this.speed;
+                    
+                    // Add to trail
+                    this.trail.push({x: this.x, y: this.y});
+                    if (this.trail.length > this.maxTrail) {
+                        this.trail.shift();
+                    }
+                } else {
+                    this.active = false;
+                }
+            }
+            
+            draw() {
+                // Draw lightning trail
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(this.x - camera.x, this.y - camera.y);
+                
+                for (let i = 0; i < this.trail.length; i++) {
+                    ctx.lineTo(this.trail[i].x - camera.x, this.trail[i].y - camera.y);
+                }
+                
+                ctx.stroke();
+                
+                // Add glow effect
+                ctx.shadowColor = '#FFD700';
+                ctx.shadowBlur = 10;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                
+                // Draw lightning head
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(this.x - camera.x, this.y - camera.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Collectible Class
+        class Collectible {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 30;
+                this.height = 30;
+                this.collected = false;
+            }
+            
+            update() {
+                // Check collision with player
+                if (!this.collected &&
+                    this.x < player.x + player.width &&
+                    this.x + this.width > player.x &&
+                    this.y < player.y + player.height &&
+                    this.y + this.height > player.y) {
+                    
+                    this.collected = true;
+                    playerMana = Math.min(100, playerMana + 20);
+                    score += 50;
+                    updateUI();
+                    
+                    // Check if all collectibles are collected
+                    checkLevelCompletion();
+                }
+            }
+            
+            draw() {
+                if (!this.collected) {
+                    ctx.fillStyle = '#FFD700';
+                    ctx.beginPath();
+                    ctx.arc(this.x - camera.x + this.width/2, this.y - camera.y + this.height/2, this.width/2, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Add glow effect
+                    ctx.shadowColor = '#FFD700';
+                    ctx.shadowBlur = 15;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+            }
+        }
+
+        // Create player
+        const player = new Player(100, 300);
+
+        // Initialize game
+        function initGame() {
+            // Reset game state
+            playerHealth = 100;
+            playerMana = 100;
+            score = 0;
+            currentLevel = 1;
+            enemies = [];
+            lightningBolts = [];
+            homingLightning = [];
+            collectibles = [];
+            platforms = [];
+            obstacles = [];
+            movingObstacles = [];
+            thunderRainActive = false;
+            thunderRainDuration = 0;
+            rainDrops = [];
+            
+            // Initialize first level
+            initLevel(currentLevel);
+            
+            // Update UI
+            updateUI();
+        }
+
+        // Initialize level
+        function initLevel(level) {
+            // Clear previous objects
+            enemies = [];
+            collectibles = [];
+            platforms = [];
+            
+            // Set level data
+            const levelData = levels[level-1];
+            levelIndicator.textContent = `Level ${level}: ${levelData.name}`;
+            
+            // Create collectibles
+            for (let i = 0; i < levelData.collectibles; i++) {
+                const x = 200 + Math.random() * 2600;
+                const y = 100 + Math.random() * 300;
+                collectibles.push(new Collectible(x, y));
+            }
+            
+            // Create enemies
+            for (let i = 0; i < levelData.enemies; i++) {
+                const x = 300 + Math.random() * 2400;
+                const y = 100 + Math.random() * 200;
+                const type = level > 25 && i === levelData.enemies - 1 ? 'boss' : 'minion';
+                enemies.push(new Enemy(x, y, type));
+            }
+            
+            // Create platforms (no harmful obstacles)
+            for (let i = 0; i < 10 + level; i++) {
+                const x = 100 + Math.random() * 2600;
+                const y = 350 + Math.random() * 100;
+                const width = 100 + Math.random() * 200;
+                const height = 20;
+                platforms.push(new Platform(x, y, width, height));
+            }
+            
+            // Show level indicator
+            showLevelIndicator(levelData.name);
+        }
+
+        // Show level indicator
+        function showLevelIndicator(levelName) {
+            seasonIndicator.textContent = levelName;
+            seasonIndicator.style.display = 'block';
+            
+            setTimeout(() => {
+                seasonIndicator.style.display = 'none';
+            }, 3000);
+        }
+
+        // Check level completion
+        function checkLevelCompletion() {
+            const allCollectiblesCollected = collectibles.every(c => c.collected);
+            const allEnemiesDefeated = enemies.length === 0;
+            
+            if (allCollectiblesCollected && allEnemiesDefeated) {
+                // Level completed
+                showLevelComplete();
+            }
+        }
+
+        // Show level complete screen
+        function showLevelComplete() {
+            levelCompleteText.innerHTML = `
+                <p>${levels[currentLevel-1].story}</p>
+                <p>You defeated ${levels[currentLevel-1].enemies} enemies and collected ${levels[currentLevel-1].collectibles} divine orbs!</p>
+                <p>Your current score: ${score}</p>
+            `;
+            levelComplete.style.display = 'flex';
+        }
+
+        // Create lightning strike effect
+        function createLightningStrike(x, y) {
+            const strike = document.createElement('div');
+            strike.className = 'lightning-strike';
+            strike.style.left = (x - camera.x) + 'px';
+            strike.style.top = (y - camera.y - 100) + 'px';
+            strike.style.height = '100px';
+            document.getElementById('gameContainer').appendChild(strike);
+            
+            setTimeout(() => {
+                strike.remove();
+            }, 200);
+        }
+
+        // Create rain effect
+        function createRainEffect() {
+            rainDrops = [];
+            for (let i = 0; i < 100; i++) {
+                rainDrops.push({
+                    x: Math.random() * 1000,
+                    y: Math.random() * 600,
+                    speed: 2 + Math.random() * 3
+                });
+            }
+        }
+
+        // Update rain effect
+        function updateRain() {
+            if (!thunderRainActive) return;
+            
+            // Update existing raindrops
+            for (let i = 0; i < rainDrops.length; i++) {
+                rainDrops[i].y += rainDrops[i].speed;
+                
+                // Reset raindrop if it goes off screen
+                if (rainDrops[i].y > 600) {
+                    rainDrops[i].y = -10;
+                    rainDrops[i].x = Math.random() * 1000;
+                }
+            }
+            
+            // Occasionally strike lightning during thunder rain
+            if (Math.random() < 0.05 && enemies.length > 0) {
+                const randomEnemy = enemies[Math.floor(Math.random() * enemies.length)];
+                createLightningStrike(randomEnemy.x + randomEnemy.width/2, randomEnemy.y);
+                randomEnemy.takeDamage(5);
+            }
+        }
+
+        // Draw rain effect
+        function drawRain() {
+            if (!thunderRainActive) return;
+            
+            ctx.fillStyle = '#1E90FF';
+            for (let i = 0; i < rainDrops.length; i++) {
+                ctx.fillRect(rainDrops[i].x, rainDrops[i].y, 1, 10);
+            }
+        }
+
+        // Update UI
+        function updateUI() {
+            healthFill.style.width = `${playerHealth}%`;
+            manaFill.style.width = `${playerMana}%`;
+            scoreElement.textContent = `Score: ${score}`;
+            
+            // Update objective text based on game state
+            const collectedCount = collectibles.filter(c => c.collected).length;
+            const totalCollectibles = levels[currentLevel-1].collectibles;
+            objectiveText.textContent = `Level ${currentLevel}: Collect ${collectedCount}/${totalCollectibles} orbs and defeat ${enemies.length} enemies`;
+        }
+
+        // Update ability UI
+        function updateAbilityUI() {
+            const abilities = document.querySelectorAll('.ability');
+            abilities.forEach((ability, index) => {
+                const abilityNames = ['lightning', 'thunder', 'shield', 'chain', 'rain'];
+                const abilityName = abilityNames[index];
+                
+                if (abilityCooldowns[abilityName] > 0) {
+                    ability.classList.add('cooldown');
+                } else {
+                    ability.classList.remove('cooldown');
+                }
+            });
+            
+            // Update mobile ability buttons
+            const mobileAbilities = document.querySelectorAll('.mobileAbility');
+            mobileAbilities.forEach((ability, index) => {
+                const abilityNames = ['lightning', 'thunder', 'shield', 'chain', 'rain'];
+                const abilityName = abilityNames[index];
+                
+                if (abilityCooldowns[abilityName] > 0) {
+                    ability.classList.add('cooldown');
+                } else {
+                    ability.classList.remove('cooldown');
+                }
+            });
+        }
+
+        // Check screen orientation
+        function checkOrientation() {
+            if (isMobile) {
+                if (window.innerHeight > window.innerWidth) {
+                    // Portrait mode
+                    rotateMessage.style.display = 'flex';
+                } else {
+                    // Landscape mode
+                    rotateMessage.style.display = 'none';
+                }
+            }
+        }
+
+        // Game loop
+        function gameLoop() {
+            if (!gameStarted) return;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Update camera to follow player
+            camera.x = player.x - canvas.width/2 + player.width/2;
+            camera.y = player.y - canvas.height/2 + player.height/2;
+            
+            // Keep camera within bounds
+            if (camera.x < 0) camera.x = 0;
+            if (camera.x > 3000 - canvas.width) camera.x = 3000 - canvas.width;
+            if (camera.y < 0) camera.y = 0;
+            if (camera.y > 600 - canvas.height) camera.y = 600 - canvas.height;
+            
+            // Draw background
+            if (backgroundImages[currentLevel] && backgroundImages[currentLevel].complete) {
+                ctx.drawImage(backgroundImages[currentLevel], -camera.x, -camera.y, 3000, 600);
+            } else {
+                // Fallback background
+                ctx.fillStyle = '#1a2a6c';
+                ctx.fillRect(-camera.x, -camera.y, 3000, 600);
+            }
+            
+            // Draw ground
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(-camera.x, 500 - camera.y, 3000, 100);
+            
+            // Draw platforms
+            platforms.forEach(platform => {
+                platform.draw();
+            });
+            
+            // Update and draw collectibles
+            collectibles.forEach(collectible => {
+                collectible.update();
+                collectible.draw();
+            });
+            
+            // Update and draw enemies (and remove dead ones)
+            for (let i = 0; i < enemies.length; i++) {
+                const keepEnemy = enemies[i].update();
+                if (keepEnemy) {
+                    enemies[i].draw();
+                } else {
+                    enemies.splice(i, 1);
+                    i--;
+                }
+            }
+            
+            // Update and draw homing lightning
+            for (let i = 0; i < homingLightning.length; i++) {
+                homingLightning[i].update();
+                if (homingLightning[i].active) {
+                    homingLightning[i].draw();
+                } else {
+                    homingLightning.splice(i, 1);
+                    i--;
+                }
+            }
+            
+            // Update and draw player
+            player.update();
+            player.draw();
+            
+            // Update thunder rain
+            if (thunderRainActive) {
+                thunderRainDuration--;
+                if (thunderRainDuration <= 0) {
+                    thunderRainActive = false;
+                }
+                updateRain();
+                drawRain();
+            }
+            
+            // Update ability cooldowns
+            for (let ability in abilityCooldowns) {
+                if (abilityCooldowns[ability] > 0) {
+                    abilityCooldowns[ability]--;
+                }
+            }
+            updateAbilityUI();
+            
+            // Regenerate mana slowly
+            if (playerMana < 100) {
+                playerMana = Math.min(100, playerMana + 0.1);
+                updateUI();
+            }
+            
+            // Check for game over
+            if (playerHealth <= 0) {
+                alert(`Game Over! Your score: ${score}`);
+                initGame();
+            }
+            
+            // Continue game loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Event Listeners
+        startButton.addEventListener('click', () => {
+            startScreen.style.display = 'none';
+            storyIntro.style.display = 'flex';
+        });
+
+        continueStory.addEventListener('click', () => {
+            storyIntro.style.display = 'none';
+            gameStarted = true;
+            initGame();
+            gameLoop();
+        });
+
+        nextLevelButton.addEventListener('click', () => {
+            levelComplete.style.display = 'none';
+            if (currentLevel < levels.length) {
+                currentLevel++;
+                initLevel(currentLevel);
+            } else {
+                // Game completed
+                alert(`Congratulations! You have completed all ${levels.length} levels and restored order to Olympus! Final Score: ${score}`);
+                currentLevel = 1;
+                initGame();
+            }
+        });
+
+        dialogButton.addEventListener('click', () => {
+            dialogBox.style.display = 'none';
+            dialogActive = false;
+        });
+
+        // Keyboard input
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            
+            // Prevent spacebar from scrolling
+            if (e.code === 'Space') {
+                e.preventDefault();
+            }
+            
+            // Ability keys
+            if (gameStarted && !dialogActive) {
+                if (e.code === 'KeyQ') {
+                    player.thunderClap();
+                } else if (e.code === 'KeyE') {
+                    player.activateShield();
+                } else if (e.code === 'KeyR') {
+                    player.chainLightning();
+                } else if (e.code === 'KeyF') {
+                    player.thunderRain();
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+
+        // Mouse input for attacking
+        canvas.addEventListener('click', (e) => {
+            if (gameStarted && !dialogActive && !isMobile) {
+                player.attack();
+            }
+        });
+
+        // Ability buttons
+        document.getElementById('lightningAbility').addEventListener('click', () => {
+            if (gameStarted && !dialogActive && !isMobile) {
+                player.attack();
+            }
+        });
+
+        document.getElementById('thunderAbility').addEventListener('click', () => {
+            if (gameStarted && !dialogActive && !isMobile) {
+                player.thunderClap();
+            }
+        });
+
+        document.getElementById('shieldAbility').addEventListener('click', () => {
+            if (gameStarted && !dialogActive && !isMobile) {
+                player.activateShield();
+            }
+        });
+
+        document.getElementById('chainAbility').addEventListener('click', () => {
+            if (gameStarted && !dialogActive && !isMobile) {
+                player.chainLightning();
+            }
+        });
+
+        document.getElementById('rainAbility').addEventListener('click', () => {
+            if (gameStarted && !dialogActive && !isMobile) {
+                player.thunderRain();
+            }
+        });
+
+        // Mobile Control Event Listeners
+        // Joystick functionality
+        let joystickActive = false;
+        let joystickStartX = 0;
+        let joystickStartY = 0;
+        let joystickX = 0;
+        let joystickY = 0;
+        
+        joystick.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            joystickActive = true;
+            const touch = e.touches[0];
+            const rect = joystickContainer.getBoundingClientRect();
+            joystickStartX = rect.left + rect.width / 2;
+            joystickStartY = rect.top + rect.height / 2;
+        });
+        
+        document.addEventListener('touchmove', (e) => {
+            if (!joystickActive) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            joystickX = touch.clientX - joystickStartX;
+            joystickY = touch.clientY - joystickStartY;
+            
+            // Limit joystick movement to container bounds
+            const maxDistance = 40;
+            const distance = Math.sqrt(joystickX * joystickX + joystickY * joystickY);
+            if (distance > maxDistance) {
+                joystickX = (joystickX / distance) * maxDistance;
+                joystickY = (joystickY / distance) * maxDistance;
+            }
+            
+            // Update joystick position
+            joystick.style.transform = `translate(${joystickX}px, ${joystickY}px)`;
+            
+            // Update mobile controls based on joystick position
+            mobileControls.left = joystickX < -15;
+            mobileControls.right = joystickX > 15;
+            mobileControls.up = joystickY < -15;
+            mobileControls.down = joystickY > 15;
+        });
+        
+        document.addEventListener('touchend', (e) => {
+            if (!joystickActive) return;
+            joystickActive = false;
+            joystick.style.transform = 'translate(0px, 0px)';
+            
+            // Reset mobile controls
+            mobileControls.left = false;
+            mobileControls.right = false;
+            mobileControls.up = false;
+            mobileControls.down = false;
+        });
+        
+        // Action buttons
+        attackButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            mobileControls.attack = true;
+        });
+        
+        jumpButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            mobileControls.jump = true;
+        });
+        
+        specialButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            mobileControls.special = true;
+        });
+        
+        // Mobile ability buttons
+        mobileLightning.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            player.attack();
+        });
+        
+        mobileThunder.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            player.thunderClap();
+        });
+        
+        mobileShield.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            player.activateShield();
+        });
+        
+        mobileChain.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            player.chainLightning();
+        });
+        
+        mobileRain.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            player.thunderRain();
+        });
+        
+        // Orientation change listener
+        window.addEventListener('resize', checkOrientation);
+        window.addEventListener('orientationchange', checkOrientation);
+        
+        // Initial orientation check
+        checkOrientation();
+    </script>
+</body>
+</html>
