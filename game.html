@@ -504,7 +504,7 @@
             opacity: 0.8;
         }
         
-        /* Story Intro Screen */
+        /* Story Intro Screen - Fixed for mobile */
         #storyIntro {
             position: absolute;
             top: 0;
@@ -516,10 +516,12 @@
             display: none;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             color: white;
             text-align: center;
             padding: 40px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         
         #storyContent {
@@ -547,13 +549,16 @@
             font-weight: bold;
             cursor: pointer;
             transition: transform 0.2s;
+            margin: 20px 0;
+            position: relative;
+            z-index: 30;
         }
         
         #continueStory:hover {
             transform: scale(1.05);
         }
         
-        /* Level Complete Screen */
+        /* Level Complete Screen - Fixed for mobile */
         #levelComplete {
             position: absolute;
             top: 0;
@@ -565,10 +570,12 @@
             display: none;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             color: white;
             text-align: center;
             padding: 40px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         
         #levelCompleteTitle {
@@ -595,6 +602,9 @@
             font-weight: bold;
             cursor: pointer;
             transition: transform 0.2s;
+            margin: 20px 0;
+            position: relative;
+            z-index: 30;
         }
         
         #nextLevelButton:hover {
@@ -640,19 +650,77 @@
                 width: 150px;
             }
             
+            /* Mobile story intro and level complete screens */
+            #storyIntro, #levelComplete {
+                padding: 20px;
+                justify-content: flex-start;
+            }
+            
             #storyContent, #levelCompleteText {
                 font-size: 18px;
-                padding: 20px;
+                padding: 0;
+                margin-bottom: 20px;
             }
             
             #storyTitle, #levelCompleteTitle {
                 font-size: 36px;
+                margin-bottom: 20px;
+            }
+            
+            #continueStory, #nextLevelButton {
+                margin: 20px 0 40px;
+                padding: 15px 30px;
+                font-size: 16px;
             }
         }
         
         @media (max-height: 500px) and (orientation: landscape) {
             #rotateMessage {
                 display: flex;
+            }
+            
+            /* Additional fixes for landscape mode on mobile */
+            #storyIntro, #levelComplete {
+                padding: 15px;
+            }
+            
+            #storyTitle, #levelCompleteTitle {
+                font-size: 28px;
+                margin-bottom: 15px;
+            }
+            
+            #storyContent, #levelCompleteText {
+                font-size: 16px;
+                margin-bottom: 15px;
+            }
+            
+            #continueStory, #nextLevelButton {
+                margin: 15px 0 25px;
+                padding: 12px 25px;
+                font-size: 14px;
+            }
+        }
+        
+        /* Extra small height devices */
+        @media (max-height: 400px) and (orientation: landscape) {
+            #storyIntro, #levelComplete {
+                padding: 10px;
+            }
+            
+            #storyTitle, #levelCompleteTitle {
+                font-size: 24px;
+                margin-bottom: 10px;
+            }
+            
+            #storyContent, #levelCompleteText {
+                font-size: 14px;
+                margin-bottom: 10px;
+            }
+            
+            #continueStory, #nextLevelButton {
+                margin: 10px 0 15px;
+                padding: 10px 20px;
+                font-size: 12px;
             }
         }
     </style>
@@ -890,7 +958,7 @@
                 collectibles: 9,
                 story: "Lightning cracks across the sky as you unleash your full power. The Titans tremble before the might of Olympus."
             },
-            // Add more levels with unique backgrounds and stories...
+            // Add more levels with placeholder data
         ];
 
         // Fill the remaining levels with placeholder data
@@ -1631,6 +1699,14 @@
                 <p>Your current score: ${score}</p>
             `;
             levelComplete.style.display = 'flex';
+            
+            // Ensure the continue button is visible
+            setTimeout(() => {
+                const nextLevelBtn = document.getElementById('nextLevelButton');
+                if (nextLevelBtn) {
+                    nextLevelBtn.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }
+            }, 100);
         }
 
         // Create lightning strike effect
@@ -1850,6 +1926,16 @@
         startButton.addEventListener('click', () => {
             startScreen.style.display = 'none';
             storyIntro.style.display = 'flex';
+            
+            // Ensure the continue button is visible on mobile
+            if (isMobile) {
+                setTimeout(() => {
+                    const continueBtn = document.getElementById('continueStory');
+                    if (continueBtn) {
+                        continueBtn.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                    }
+                }, 100);
+            }
         });
 
         continueStory.addEventListener('click', () => {
