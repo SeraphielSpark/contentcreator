@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Olympian Game - Zeus Adventure</title>
     <style>
         * {
@@ -21,21 +21,23 @@
             color: #fff;
             overflow: hidden;
             height: 100vh;
+            width: 100vw;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             touch-action: manipulation;
+            position: fixed;
         }
         
         #gameContainer {
             position: relative;
-            width: 100%;
-            max-width: 1000px;
-            height: 600px;
-            margin: 0 auto;
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
-            border-radius: 10px;
+            width: 100vw;
+            height: 100vh;
+            max-width: none;
+            margin: 0;
+            box-shadow: none;
+            border-radius: 0;
             overflow: hidden;
         }
         
@@ -43,6 +45,8 @@
             display: block;
             background: linear-gradient(to bottom, #87CEEB, #3a7bd5);
             cursor: crosshair;
+            width: 100%;
+            height: 100%;
         }
         
         #uiOverlay {
@@ -57,12 +61,12 @@
         
         #healthBar {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            width: 200px;
-            height: 25px;
+            top: 10px;
+            left: 10px;
+            width: 150px;
+            height: 20px;
             background: rgba(0, 0, 0, 0.5);
-            border-radius: 12px;
+            border-radius: 10px;
             overflow: hidden;
             border: 2px solid #fff;
         }
@@ -76,12 +80,12 @@
         
         #manaBar {
             position: absolute;
-            top: 55px;
-            left: 20px;
-            width: 200px;
-            height: 25px;
+            top: 40px;
+            left: 10px;
+            width: 150px;
+            height: 20px;
             background: rgba(0, 0, 0, 0.5);
-            border-radius: 12px;
+            border-radius: 10px;
             overflow: hidden;
             border: 2px solid #fff;
         }
@@ -94,46 +98,30 @@
         }
         
         #controls {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px 15px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-        
-        #controls h3 {
-            margin-bottom: 8px;
-            font-size: 16px;
-            color: #FFD700;
-        }
-        
-        #controls p {
-            font-size: 12px;
-            margin-bottom: 4px;
+            display: none;
         }
         
         #objective {
             position: absolute;
-            top: 20px;
-            right: 20px;
+            top: 10px;
+            right: 10px;
             background: rgba(0, 0, 0, 0.6);
-            padding: 15px;
+            padding: 10px;
             border-radius: 8px;
             border: 1px solid rgba(255, 255, 255, 0.3);
-            max-width: 300px;
+            max-width: 200px;
+            font-size: 12px;
         }
         
         #objective h3 {
-            margin-bottom: 10px;
-            font-size: 16px;
+            margin-bottom: 5px;
+            font-size: 14px;
             color: #FFD700;
         }
         
         #objective p {
-            font-size: 14px;
-            line-height: 1.4;
+            font-size: 11px;
+            line-height: 1.3;
         }
         
         #dialogBox {
@@ -141,9 +129,9 @@
             bottom: 100px;
             left: 50%;
             transform: translateX(-50%);
-            width: 80%;
+            width: 90%;
             background: rgba(0, 0, 0, 0.8);
-            padding: 20px;
+            padding: 15px;
             border-radius: 10px;
             border: 2px solid #FFD700;
             text-align: center;
@@ -153,7 +141,7 @@
         }
         
         #dialogText {
-            font-size: 18px;
+            font-size: 16px;
             margin-bottom: 15px;
             line-height: 1.4;
         }
@@ -187,32 +175,31 @@
             justify-content: center;
             z-index: 20;
             pointer-events: auto;
+            padding: 20px;
+            text-align: center;
         }
         
         #title {
-            font-size: 60px;
+            font-size: 40px;
             font-weight: bold;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
             color: #FFD700;
-            text-align: center;
         }
         
         #subtitle {
-            font-size: 24px;
-            margin-bottom: 40px;
-            text-align: center;
-            max-width: 600px;
-            line-height: 1.5;
+            font-size: 18px;
+            margin-bottom: 30px;
+            line-height: 1.4;
         }
         
         #startButton {
             background: linear-gradient(to right, #FFD700, #FFA500);
             border: none;
-            padding: 15px 40px;
+            padding: 12px 30px;
             border-radius: 30px;
             color: #000;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
             cursor: pointer;
             transition: transform 0.3s, box-shadow 0.3s;
@@ -225,62 +212,28 @@
         }
         
         #abilities {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            display: flex;
-            gap: 15px;
-            pointer-events: auto;
-        }
-        
-        .ability {
-            width: 60px;
-            height: 60px;
-            background: rgba(0, 0, 0, 0.6);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            cursor: pointer;
-            transition: transform 0.2s, border-color 0.2s;
-            pointer-events: auto;
-        }
-        
-        .ability:hover {
-            transform: scale(1.1);
-            border-color: #FFD700;
-        }
-        
-        .ability-icon {
-            font-size: 24px;
-            color: #FFD700;
-        }
-        
-        .ability.cooldown {
-            opacity: 0.5;
-            cursor: not-allowed;
+            display: none;
         }
         
         #levelIndicator {
             position: absolute;
-            top: 20px;
+            top: 70px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(0, 0, 0, 0.6);
-            padding: 8px 20px;
+            padding: 5px 15px;
             border-radius: 20px;
-            font-size: 18px;
+            font-size: 16px;
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
         
         #score {
             position: absolute;
-            top: 90px;
-            left: 20px;
-            font-size: 18px;
+            top: 70px;
+            left: 10px;
+            font-size: 16px;
             background: rgba(0, 0, 0, 0.6);
-            padding: 5px 15px;
+            padding: 5px 10px;
             border-radius: 20px;
         }
         
@@ -299,12 +252,12 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 40px;
+            font-size: 30px;
             font-weight: bold;
             color: #FFD700;
             text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
             background: rgba(0, 0, 0, 0.7);
-            padding: 20px 40px;
+            padding: 15px 30px;
             border-radius: 10px;
             border: 3px solid #FFD700;
             display: none;
@@ -359,17 +312,17 @@
             }
         }
         
-        /* Mobile Controls - Redesigned with Mini Joystick */
+        /* Mobile Controls - Always visible for testing */
         #mobileControls {
             position: absolute;
-            bottom: 20px;
+            bottom: 0;
             left: 0;
             width: 100%;
             height: 180px;
-            display: none;
+            display: flex;
             pointer-events: auto;
             z-index: 15;
-            padding: 0 20px;
+            padding: 0 10px;
         }
         
         #joystickContainer {
@@ -427,6 +380,7 @@
             transition: all 0.1s;
             touch-action: manipulation;
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+            pointer-events: auto;
         }
         
         .actionButton:active {
@@ -437,17 +391,17 @@
         
         #mobileAbilityButtons {
             position: absolute;
-            top: 20px;
-            right: 20px;
-            display: none;
+            top: 100px;
+            right: 10px;
+            display: flex;
             flex-direction: column;
             gap: 10px;
             pointer-events: auto;
         }
         
         .mobileAbility {
-            width: 55px;
-            height: 55px;
+            width: 50px;
+            height: 50px;
             background: rgba(30, 30, 30, 0.8);
             border-radius: 10px;
             display: flex;
@@ -457,6 +411,7 @@
             touch-action: manipulation;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
             transition: all 0.1s;
+            pointer-events: auto;
         }
         
         .mobileAbility:active {
@@ -519,22 +474,22 @@
             justify-content: flex-start;
             color: white;
             text-align: center;
-            padding: 40px;
+            padding: 20px;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
         }
         
         #storyContent {
-            max-width: 800px;
-            font-size: 22px;
+            max-width: 100%;
+            font-size: 18px;
             line-height: 1.6;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
             text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
         }
         
         #storyTitle {
-            font-size: 48px;
-            margin-bottom: 30px;
+            font-size: 36px;
+            margin-bottom: 20px;
             color: #FFD700;
             text-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
         }
@@ -573,23 +528,23 @@
             justify-content: flex-start;
             color: white;
             text-align: center;
-            padding: 40px;
+            padding: 20px;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
         }
         
         #levelCompleteTitle {
-            font-size: 48px;
+            font-size: 36px;
             margin-bottom: 20px;
             color: #FFD700;
             text-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
         }
         
         #levelCompleteText {
-            font-size: 22px;
+            font-size: 18px;
             line-height: 1.6;
             margin-bottom: 30px;
-            max-width: 800px;
+            max-width: 100%;
         }
         
         #nextLevelButton {
@@ -611,13 +566,12 @@
             transform: scale(1.05);
         }
         
-        /* Mobile-specific styles */
-        @media (max-width: 768px) {
+        /* Force mobile layout for testing */
+        @media (max-width: 2000px) {
+            /* This will apply to all screen sizes for testing */
             #gameContainer {
-                width: 100%;
+                width: 100vw;
                 height: 100vh;
-                max-width: none;
-                border-radius: 0;
             }
             
             #gameCanvas {
@@ -699,6 +653,14 @@
                 padding: 12px 25px;
                 font-size: 14px;
             }
+            
+            #mobileAbilityButtons {
+                top: 70px;
+            }
+            
+            #levelIndicator, #score {
+                top: 50px;
+            }
         }
         
         /* Extra small height devices */
@@ -722,12 +684,31 @@
                 padding: 10px 20px;
                 font-size: 12px;
             }
+            
+            #mobileAbilityButtons {
+                top: 60px;
+            }
+            
+            #levelIndicator, #score {
+                top: 40px;
+                font-size: 14px;
+            }
+            
+            #healthBar, #manaBar {
+                top: 5px;
+                width: 120px;
+                height: 15px;
+            }
+            
+            #manaBar {
+                top: 30px;
+            }
         }
     </style>
 </head>
 <body>
     <div id="gameContainer">
-        <canvas id="gameCanvas" width="1000" height="600"></canvas>
+        <canvas id="gameCanvas"></canvas>
         
         <div id="uiOverlay">
             <div id="healthBar">
@@ -881,8 +862,8 @@
         const mobileChain = document.getElementById('mobileChain');
         const mobileRain = document.getElementById('mobileRain');
 
-        // Check if mobile device
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        // Force mobile layout for testing
+        const isMobile = true; // Force mobile layout
         
         // Game State
         let gameStarted = false;
@@ -925,35 +906,35 @@
         const levels = [
             { 
                 name: "Spring of Beginnings", 
-                background:"background1.jpg", //"https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+                background:"background1.jpg",
                 enemies: 8, 
                 collectibles: 5,
                 story: "You begin your journey in the lush fields of the mortal realm. The Titans have begun their assault, and you must gather your power to face them."
             },
             { 
                 name: "Summer of Growth", 
-                background: "background2.jpg", //"https://images.unsplash.com/photo-1505142468610-359e7d316be0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+                background: "background2.jpg",
                 enemies: 12, 
                 collectibles: 6,
                 story: "The heat of battle intensifies as you venture deeper into Titan territory. Your powers grow with each victory."
             },
             { 
                 name: "Autumn of Harvest", 
-                background: "background3.jpg", //"https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+                background: "background3.jpg",
                 enemies: 16, 
                 collectibles: 7,
                 story: "The fallen leaves mark the passing of your enemies. But greater challenges await as you approach the Titan stronghold."
             },
             { 
                 name: "Winter of Trials", 
-                background:"background4.jpg", // "https://images.unsplash.com/photo-1518837695005-2083093ee35b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+                background:"background4.jpg",
                 enemies: 20, 
                 collectibles: 8,
                 story: "The cold winds of the northern realms test your resolve. The Titans grow desperate as you near their fortress."
             },
             { 
                 name: "Season of Storms", 
-                background:"background5.jpg", // "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
+                background:"background5.jpg",
                 enemies: 25, 
                 collectibles: 9,
                 story: "Lightning cracks across the sky as you unleash your full power. The Titans tremble before the might of Olympus."
@@ -1821,6 +1802,12 @@
             }
         }
 
+        // Resize canvas to fit screen
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
         // Game loop
         function gameLoop() {
             if (!gameStarted) return;
@@ -2125,10 +2112,17 @@
         });
         
         // Orientation change listener
-        window.addEventListener('resize', checkOrientation);
-        window.addEventListener('orientationchange', checkOrientation);
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            checkOrientation();
+        });
+        window.addEventListener('orientationchange', () => {
+            resizeCanvas();
+            checkOrientation();
+        });
         
-        // Initial orientation check
+        // Initial setup
+        resizeCanvas();
         checkOrientation();
     </script>
 </body>
