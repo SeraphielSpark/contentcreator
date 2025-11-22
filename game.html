@@ -557,12 +557,89 @@
             font-weight: bold;
             cursor: pointer;
             transition: transform 0.2s;
-            margin: 20px 0;
+            margin: 10px 0;
             position: relative;
             z-index: 30;
         }
         
         #nextLevelButton:hover {
+            transform: scale(1.05);
+        }
+        
+        /* Game Complete Screen */
+        #gameComplete {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 35;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        #gameCompleteTitle {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #FFD700;
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
+        }
+        
+        #gameCompleteText {
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            max-width: 100%;
+        }
+        
+        #highScores {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 300px;
+        }
+        
+        #highScores h3 {
+            color: #FFD700;
+            margin-bottom: 10px;
+        }
+        
+        #highScoresList {
+            list-style-type: none;
+            text-align: left;
+        }
+        
+        #highScoresList li {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        #restartGameButton {
+            background: linear-gradient(to right, #FFD700, #FFA500);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            color: #000;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin: 10px 0;
+            position: relative;
+            z-index: 30;
+        }
+        
+        #restartGameButton:hover {
             transform: scale(1.05);
         }
         
@@ -605,23 +682,23 @@
             }
             
             /* Mobile story intro and level complete screens */
-            #storyIntro, #levelComplete {
+            #storyIntro, #levelComplete, #gameComplete {
                 padding: 20px;
                 justify-content: flex-start;
             }
             
-            #storyContent, #levelCompleteText {
+            #storyContent, #levelCompleteText, #gameCompleteText {
                 font-size: 18px;
                 padding: 0;
                 margin-bottom: 20px;
             }
             
-            #storyTitle, #levelCompleteTitle {
+            #storyTitle, #levelCompleteTitle, #gameCompleteTitle {
                 font-size: 36px;
                 margin-bottom: 20px;
             }
             
-            #continueStory, #nextLevelButton {
+            #continueStory, #nextLevelButton, #restartGameButton {
                 margin: 20px 0 40px;
                 padding: 15px 30px;
                 font-size: 16px;
@@ -634,21 +711,21 @@
             }
             
             /* Additional fixes for landscape mode on mobile */
-            #storyIntro, #levelComplete {
+            #storyIntro, #levelComplete, #gameComplete {
                 padding: 15px;
             }
             
-            #storyTitle, #levelCompleteTitle {
+            #storyTitle, #levelCompleteTitle, #gameCompleteTitle {
                 font-size: 28px;
                 margin-bottom: 15px;
             }
             
-            #storyContent, #levelCompleteText {
+            #storyContent, #levelCompleteText, #gameCompleteText {
                 font-size: 16px;
                 margin-bottom: 15px;
             }
             
-            #continueStory, #nextLevelButton {
+            #continueStory, #nextLevelButton, #restartGameButton {
                 margin: 15px 0 25px;
                 padding: 12px 25px;
                 font-size: 14px;
@@ -665,21 +742,21 @@
         
         /* Extra small height devices */
         @media (max-height: 400px) and (orientation: landscape) {
-            #storyIntro, #levelComplete {
+            #storyIntro, #levelComplete, #gameComplete {
                 padding: 10px;
             }
             
-            #storyTitle, #levelCompleteTitle {
+            #storyTitle, #levelCompleteTitle, #gameCompleteTitle {
                 font-size: 24px;
                 margin-bottom: 10px;
             }
             
-            #storyContent, #levelCompleteText {
+            #storyContent, #levelCompleteText, #gameCompleteText {
                 font-size: 14px;
                 margin-bottom: 10px;
             }
             
-            #continueStory, #nextLevelButton {
+            #continueStory, #nextLevelButton, #restartGameButton {
                 margin: 10px 0 15px;
                 padding: 10px 20px;
                 font-size: 12px;
@@ -821,6 +898,25 @@
             <button id="nextLevelButton">Continue to Next Level</button>
         </div>
         
+        <div id="gameComplete">
+            <h1 id="gameCompleteTitle">Congratulations!</h1>
+            <div id="gameCompleteText">
+                <p>You have successfully completed all levels and restored peace to Olympus!</p>
+                <p>Your final score: <span id="finalScore">0</span></p>
+            </div>
+            <div id="highScores">
+                <h3>High Scores</h3>
+                <ul id="highScoresList">
+                    <li>1. ---</li>
+                    <li>2. ---</li>
+                    <li>3. ---</li>
+                    <li>4. ---</li>
+                    <li>5. ---</li>
+                </ul>
+            </div>
+            <button id="restartGameButton">Return to Main Menu</button>
+        </div>
+        
         <div id="rotateMessage">
             <div id="rotateIcon">🔄</div>
             <div id="rotateText">Please Rotate Your Device</div>
@@ -849,6 +945,11 @@
         const levelComplete = document.getElementById('levelComplete');
         const levelCompleteText = document.getElementById('levelCompleteText');
         const nextLevelButton = document.getElementById('nextLevelButton');
+        const gameComplete = document.getElementById('gameComplete');
+        const gameCompleteText = document.getElementById('gameCompleteText');
+        const finalScoreElement = document.getElementById('finalScore');
+        const highScoresList = document.getElementById('highScoresList');
+        const restartGameButton = document.getElementById('restartGameButton');
 
         // Mobile Control Elements
         const joystick = document.getElementById('joystick');
@@ -868,8 +969,8 @@
         // Game State
         let gameStarted = false;
         let currentLevel = 1;
-        let playerHealth = 100;
-        let playerMana = 100;
+        let playerHealth = 300;
+        let playerMana = 300;
         let score = 0;
         let enemies = [];
         let lightningBolts = [];
@@ -902,7 +1003,10 @@
             special: false
         };
 
-        // Level data - 30 different levels with unique backgrounds
+        // High scores
+        let highScores = [];
+
+        // Level data - 10 different levels with unique backgrounds
         const levels = [
             { 
                 name: "Spring of Beginnings", 
@@ -939,19 +1043,42 @@
                 collectibles: 9,
                 story: "Lightning cracks across the sky as you unleash your full power. The Titans tremble before the might of Olympus."
             },
-            // Add more levels with placeholder data
+            { 
+                name: "Titan's Stronghold", 
+                background:"background6.jpg",
+                enemies: 30, 
+                collectibles: 10,
+                story: "You've reached the heart of the Titan's domain. The final confrontation awaits."
+            },
+            { 
+                name: "Gate of Olympus", 
+                background:"background7.jpg",
+                enemies: 35, 
+                collectibles: 11,
+                story: "The gates of Olympus stand before you. Prove your worth to enter the divine realm."
+            },
+            { 
+                name: "Hall of Gods", 
+                background:"background8.jpg",
+                enemies: 40, 
+                collectibles: 12,
+                story: "The halls of the gods echo with the sounds of battle. The Titans have desecrated this sacred place."
+            },
+            { 
+                name: "Throne of Power", 
+                background:"background9.jpg",
+                enemies: 45, 
+                collectibles: 13,
+                story: "The throne room awaits. The Titan King himself stands between you and victory."
+            },
+            { 
+                name: "Final Confrontation", 
+                background:"background10.jpg",
+                enemies: 50, 
+                collectibles: 15,
+                story: "This is it. The final battle that will determine the fate of Olympus. Unleash all your power!"
+            }
         ];
-
-        // Fill the remaining levels with placeholder data
-        for (let i = 6; i <= 30; i++) {
-            levels.push({
-                name: `Level ${i}: The Titan's Challenge`,
-                background: `https://picsum.photos/1000/600?random=${i}`,
-                enemies: 20 + i * 2,
-                collectibles: 5 + i,
-                story: `Your journey continues as you face ever greater challenges. Level ${i} brings new trials and stronger enemies. Prove your worth as the King of Gods!`
-            });
-        }
 
         // Game Variables
         const gravity = 0.5;
@@ -972,6 +1099,46 @@
         for (let i = 0; i < levels.length; i++) {
             backgroundImages[i+1] = new Image();
             backgroundImages[i+1].src = levels[i].background;
+        }
+
+        // Load high scores from localStorage
+        function loadHighScores() {
+            const savedScores = localStorage.getItem('zeusAdventureHighScores');
+            if (savedScores) {
+                highScores = JSON.parse(savedScores);
+            } else {
+                highScores = [0, 0, 0, 0, 0];
+            }
+            updateHighScoresDisplay();
+        }
+
+        // Save high scores to localStorage
+        function saveHighScores() {
+            localStorage.setItem('zeusAdventureHighScores', JSON.stringify(highScores));
+        }
+
+        // Update high score display
+        function updateHighScoresDisplay() {
+            highScoresList.innerHTML = '';
+            for (let i = 0; i < highScores.length; i++) {
+                const li = document.createElement('li');
+                li.textContent = `${i+1}. ${highScores[i] > 0 ? highScores[i] : '---'}`;
+                highScoresList.appendChild(li);
+            }
+        }
+
+        // Check and update high scores
+        function updateHighScores() {
+            let newScore = score;
+            for (let i = 0; i < highScores.length; i++) {
+                if (newScore > highScores[i]) {
+                    const temp = highScores[i];
+                    highScores[i] = newScore;
+                    newScore = temp;
+                }
+            }
+            saveHighScores();
+            updateHighScoresDisplay();
         }
 
         // Player Class
@@ -1021,8 +1188,6 @@
                 if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW'] || mobileControls.jump) && this.onGround) {
                     this.velY = -this.jumpPower;
                     this.onGround = false;
-                    // Reset jump button state
-                    mobileControls.jump = false;
                 }
                 
                 // Update position
@@ -1081,13 +1246,11 @@
                 // Handle mobile attack
                 if (mobileControls.attack) {
                     this.attack();
-                    mobileControls.attack = false;
                 }
                 
                 // Handle mobile special
                 if (mobileControls.special) {
                     this.thunderRain();
-                    mobileControls.special = false;
                 }
             }
 
@@ -1634,7 +1797,7 @@
             for (let i = 0; i < levelData.enemies; i++) {
                 const x = 300 + Math.random() * 2400;
                 const y = 100 + Math.random() * 200;
-                const type = level > 25 && i === levelData.enemies - 1 ? 'boss' : 'minion';
+                const type = level > 5 && i === levelData.enemies - 1 ? 'boss' : 'minion';
                 enemies.push(new Enemy(x, y, type));
             }
             
@@ -1668,7 +1831,12 @@
             
             if (allCollectiblesCollected && allEnemiesDefeated) {
                 // Level completed
-                showLevelComplete();
+                if (currentLevel < levels.length) {
+                    showLevelComplete();
+                } else {
+                    // Game completed
+                    showGameComplete();
+                }
             }
         }
 
@@ -1686,6 +1854,21 @@
                 const nextLevelBtn = document.getElementById('nextLevelButton');
                 if (nextLevelBtn) {
                     nextLevelBtn.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }
+            }, 100);
+        }
+
+        // Show game complete screen
+        function showGameComplete() {
+            finalScoreElement.textContent = score;
+            updateHighScores();
+            gameComplete.style.display = 'flex';
+            
+            // Ensure the restart button is visible
+            setTimeout(() => {
+                const restartBtn = document.getElementById('restartGameButton');
+                if (restartBtn) {
+                    restartBtn.scrollIntoView({ behavior: 'smooth', block: 'end' });
                 }
             }, 100);
         }
@@ -1939,10 +2122,14 @@
                 initLevel(currentLevel);
             } else {
                 // Game completed
-                alert(`Congratulations! You have completed all ${levels.length} levels and restored order to Olympus! Final Score: ${score}`);
-                currentLevel = 1;
-                initGame();
+                showGameComplete();
             }
+        });
+
+        restartGameButton.addEventListener('click', () => {
+            gameComplete.style.display = 'none';
+            startScreen.style.display = 'flex';
+            gameStarted = false;
         });
 
         dialogButton.addEventListener('click', () => {
@@ -2069,10 +2256,15 @@
             mobileControls.down = false;
         });
         
-        // Action buttons
+        // Action buttons - Fixed to allow simultaneous input
         attackButton.addEventListener('touchstart', (e) => {
             e.preventDefault();
             mobileControls.attack = true;
+        });
+        
+        attackButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            mobileControls.attack = false;
         });
         
         jumpButton.addEventListener('touchstart', (e) => {
@@ -2080,9 +2272,19 @@
             mobileControls.jump = true;
         });
         
+        jumpButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            mobileControls.jump = false;
+        });
+        
         specialButton.addEventListener('touchstart', (e) => {
             e.preventDefault();
             mobileControls.special = true;
+        });
+        
+        specialButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            mobileControls.special = false;
         });
         
         // Mobile ability buttons
@@ -2122,6 +2324,7 @@
         });
         
         // Initial setup
+        loadHighScores();
         resizeCanvas();
         checkOrientation();
     </script>
