@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Builder</title>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3a0ca3;
+            --accent: #4cc9f0;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --success: #4bb543;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --info: #17a2b8;
+            --gray: #6c757d;
+            --light-gray: #e9ecef;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--light-gray);
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+            margin-bottom: 2rem;
+            box-shadow: var(--box-shadow);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-section, .preview-section {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--box-shadow);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--light-gray);
+            color: var(--secondary);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--light-gray);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .skills-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .skill-tag {
+            background-color: var(--light-gray);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .skill-tag button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--danger);
+            font-weight: bold;
+            font-size: 1rem;
+            padding: 0;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .skill-tag button:hover {
+            background-color: rgba(220, 53, 69, 0.1);
+        }
+
+        .template-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .template-option {
+            border: 2px solid var(--light-gray);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .template-option:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .template-option.selected {
+            border-color: var(--primary);
+            background-color: rgba(67, 97, 238, 0.1);
+        }
+
+        .template-preview {
+            height: 80px;
+            background-color: var(--light-gray);
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--gray);
+        }
+
+        .preview-container {
+            border: 1px solid var(--light-gray);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            height: 600px;
+            overflow-y: auto;
+        }
+
+        .portfolio-template {
+            min-height: 100%;
+            padding: 2rem;
+        }
+
+        .template-1 {
+            background-color: white;
+            color: var(--dark);
+        }
+
+        .template-2 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .template-3 {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .portfolio-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .template-2 .portfolio-header,
+        .template-3 .portfolio-header {
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .portfolio-name {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .portfolio-title {
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+
+        .portfolio-section {
+            margin-bottom: 2rem;
+        }
+
+        .portfolio-section h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .template-2 .portfolio-section h3,
+        .template-3 .portfolio-section h3 {
+            color: white;
+        }
+
+        .portfolio-skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .portfolio-skill {
+            background-color: var(--primary);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .template-2 .portfolio-skill,
+        .template-3 .portfolio-skill {
+            background-color: rgba(255,255,255,0.2);
+        }
+
+        .actions {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--secondary);
+        }
+
+        .btn-secondary {
+            background-color: var(--light-gray);
+            color: var(--dark);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--gray);
+            color: white;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab.active {
+            border-bottom: 3px solid var(--primary);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .tab-content {
+            padding: 1.5rem 0;
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .social-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background-color: var(--light-gray);
+            border-radius: 50%;
+            color: var(--dark);
+            text-decoration: none;
+        }
+
+        .social-link:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .education-item, .experience-item {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .item-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .item-subtitle {
+            opacity: 0.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .item-date {
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+
+        .add-item-btn {
+            background: none;
+            border: 1px dashed var(--gray);
+            color: var(--gray);
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            margin-top: 1rem;
+            width: 100%;
+        }
+
+        .add-item-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            background-color: var(--success);
+            color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            transform: translateX(150%);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--gray);
+        }
+
+        .delete-btn {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            margin-top: 0.5rem;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Portfolio Builder</h1>
+            <p class="subtitle">Create your professional portfolio in minutes</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="app-container">
+            <div class="form-section">
+                <h2 class="section-title">Build Your Portfolio</h2>
+                
+                <div class="tab-container">
+                    <div class="tabs">
+                        <div class="tab active" data-tab="personal">Personal Info</div>
+                        <div class="tab" data-tab="professional">Professional</div>
+                        <div class="tab" data-tab="design">Design</div>
+                    </div>
+                    
+                    <div class="tab-content">
+                        <div class="tab-pane active" id="personal-tab">
+                            <div class="form-group">
+                                <label for="fullName">Full Name</label>
+                                <input type="text" id="fullName" placeholder="John Doe">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="jobTitle">Job Title</label>
+                                <input type="text" id="jobTitle" placeholder="Web Developer">
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="form-row">
+                                    <div>
+                                        <label for="email">Email</label>
+                                        <input type="email" id="email" placeholder="john@example.com">
+                                    </div>
+                                    <div>
+                                        <label for="phone">Phone</label>
+                                        <input type="tel" id="phone" placeholder="+1 (555) 123-4567">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="location">Location</label>
+                                <input type="text" id="location" placeholder="New York, NY">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="bio">Bio/Summary</label>
+                                <textarea id="bio" placeholder="Write a brief summary about yourself..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="tab-pane" id="professional-tab">
+                            <div class="form-group">
+                                <label for="skills">Skills</label>
+                                <div class="skills-input-container">
+                                    <input type="text" id="skillsInput" placeholder="Add a skill and press Enter">
+                                    <div class="skills-container" id="skillsContainer"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Education</label>
+                                <div id="educationContainer">
+                                    <div class="education-item">
+                                        <input type="text" class="education-degree" placeholder="Degree">
+                                        <input type="text" class="education-school" placeholder="School/University">
+                                        <input type="text" class="education-date" placeholder="Dates (e.g., 2018-2022)">
+                                    </div>
+                                </div>
+                                <button class="add-item-btn" id="addEducation">+ Add Education</button>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Experience</label>
+                                <div id="experienceContainer">
+                                    <div class="experience-item">
+                                        <input type="text" class="experience-position" placeholder="Position">
+                                        <input type="text" class="experience-company" placeholder="Company">
+                                        <input type="text" class="experience-date" placeholder="Dates (e.g., 2020-Present)">
+                                        <textarea class="experience-description" placeholder="Description"></textarea>
+                                    </div>
+                                </div>
+                                <button class="add-item-btn" id="addExperience">+ Add Experience</button>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Social Links</label>
+                                <div class="social-inputs">
+                                    <input type="text" id="linkedin" placeholder="LinkedIn URL">
+                                    <input type="text" id="github" placeholder="GitHub URL">
+                                    <input type="text" id="twitter" placeholder="Twitter URL">
+                                    <input type="text" id="website" placeholder="Personal Website">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="tab-pane" id="design-tab">
+                            <div class="form-group">
+                                <label>Choose a Template</label>
+                                <div class="template-options">
+                                    <div class="template-option selected" data-template="1">
+                                        <div class="template-preview">Minimal</div>
+                                        <div>Template 1</div>
+                                    </div>
+                                    <div class="template-option" data-template="2">
+                                        <div class="template-preview">Modern</div>
+                                        <div>Template 2</div>
+                                    </div>
+                                    <div class="template-option" data-template="3">
+                                        <div class="template-preview">Professional</div>
+                                        <div>Template 3</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="actions">
+                    <button class="btn btn-secondary" id="resetBtn">Reset</button>
+                    <button class="btn btn-primary" id="exportBtn">Export Portfolio</button>
+                </div>
+            </div>
+            
+            <div class="preview-section">
+                <h2 class="section-title">Live Preview</h2>
+                <div class="preview-container">
+                    <div class="portfolio-template template-1" id="portfolioPreview">
+                        <div class="portfolio-header">
+                            <h1 class="portfolio-name">Your Name</h1>
+                            <p class="portfolio-title">Your Job Title</p>
+                        </div>
+                        
+                        <div class="portfolio-section">
+                            <h3>About Me</h3>
+                            <p class="portfolio-bio">Your bio will appear here.</p>
+                        </div>
+                        
+                        <div class="portfolio-section">
+                            <h3>Skills</h3>
+                            <div class="portfolio-skills">
+                                <span class="portfolio-skill">HTML</span>
+                                <span class="portfolio-skill">CSS</span>
+                                <span class="portfolio-skill">JavaScript</span>
+                            </div>
+                        </div>
+                        
+                        <div class="portfolio-section">
+                            <h3>Education</h3>
+                            <div class="portfolio-education">
+                                <div class="empty-state">
+                                    <p>Your education details will appear here.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="portfolio-section">
+                            <h3>Experience</h3>
+                            <div class="portfolio-experience">
+                                <div class="empty-state">
+                                    <p>Your work experience will appear here.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="portfolio-section">
+                            <h3>Contact</h3>
+                            <p class="contact-email">Email: your.email@example.com</p>
+                            <p class="contact-phone">Phone: +1 (555) 123-4567</p>
+                            <p class="contact-location">Location: Your Location</p>
+                            <div class="social-links">
+                                <a href="#" class="social-link">in</a>
+                                <a href="#" class="social-link">gh</a>
+                                <a href="#" class="social-link">tw</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification">Portfolio exported successfully!</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Elements
+  const tabs = document.querySelectorAll('.tab');
+  const tabPanes = document.querySelectorAll('.tab-pane');
+  const templateOptions = document.querySelectorAll('.template-option');
+  const portfolioPreview = document.getElementById('portfolioPreview');
+
+  // Inputs
+  const fullNameInput = document.getElementById('fullName');
+  const jobTitleInput = document.getElementById('jobTitle');
+  const emailInput = document.getElementById('email');
+  const phoneInput = document.getElementById('phone');
+  const locationInput = document.getElementById('location');
+  const bioInput = document.getElementById('bio');
+
+  const linkedinInput = document.getElementById('linkedin');
+  const githubInput = document.getElementById('github');
+  const twitterInput = document.getElementById('twitter');
+  const websiteInput = document.getElementById('website');
+
+  // Skills
+  const skillsInput = document.getElementById('skillsInput');
+  const skillsContainer = document.getElementById('skillsContainer');
+  let skills = ['HTML', 'CSS', 'JavaScript'];
+
+  // Education / Experience form containers
+  const educationFormContainer = document.getElementById('educationContainer');
+  const experienceFormContainer = document.getElementById('experienceContainer');
+
+  // Preview containers inside preview pane
+  const previewEducation = document.querySelector('.portfolio-education');
+  const previewExperience = document.querySelector('.portfolio-experience');
+  const previewSkills = document.querySelector('.portfolio-skills');
+
+  // Buttons
+  const addEducationBtn = document.getElementById('addEducation');
+  const addExperienceBtn = document.getElementById('addExperience');
+  const resetBtn = document.getElementById('resetBtn');
+  const exportBtn = document.getElementById('exportBtn');
+
+  // Notification helper
+  const notification = document.getElementById('notification');
+  function showNotification(text = 'Saved', ms = 1800) {
+    if (!notification) return;
+    notification.textContent = text;
+    notification.classList.add('show');
+    setTimeout(() => notification.classList.remove('show'), ms);
+  }
+
+  // -----------------------
+  // Tabs
+  // -----------------------
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+
+      tabPanes.forEach(p => p.classList.remove('active'));
+      const pane = document.getElementById(tab.dataset.tab + '-tab');
+      if (pane) pane.classList.add('active');
+    });
+  });
+
+  // -----------------------
+  // Template options
+  // -----------------------
+  templateOptions.forEach(opt => {
+    opt.addEventListener('click', () => {
+      templateOptions.forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      const t = opt.dataset.template;
+      portfolioPreview.className = 'portfolio-template template-' + t;
+    });
+  });
+
+  // -----------------------
+  // Skills (DOM-based)
+  // -----------------------
+  function renderSkillsForm() {
+    skillsContainer.innerHTML = '';
+    skills.forEach((s, i) => {
+      const tag = document.createElement('div');
+      tag.className = 'skill-tag';
+
+      const span = document.createElement('span');
+      span.textContent = s;
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.title = 'Remove';
+      btn.textContent = '×';
+      btn.addEventListener('click', () => {
+        skills.splice(i, 1);
+        renderSkillsForm();
+        renderSkillsPreview();
+      });
+
+      tag.appendChild(span);
+      tag.appendChild(btn);
+      skillsContainer.appendChild(tag);
+    });
+  }
+
+  skillsInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const val = skillsInput.value.trim();
+      if (!val) return;
+      if (!skills.includes(val)) skills.push(val);
+      skillsInput.value = '';
+      renderSkillsForm();
+      renderSkillsPreview();
+    }
+  });
+
+  function renderSkillsPreview() {
+    previewSkills.innerHTML = '';
+    if (!skills.length) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.innerHTML = '<p>No skills added yet.</p>';
+      previewSkills.appendChild(empty);
+      return;
+    }
+    skills.forEach(s => {
+      const span = document.createElement('span');
+      span.className = 'portfolio-skill';
+      span.textContent = s;
+      previewSkills.appendChild(span);
+    });
+  }
+
+  // -----------------------
+  // Education (form blocks + preview)
+  // -----------------------
+  function createEducationFormBlock(degree = '', school = '', dates = '') {
+    const block = document.createElement('div');
+    block.className = 'education-item';
+
+    const degreeInput = document.createElement('input');
+    degreeInput.type = 'text';
+    degreeInput.className = 'education-degree';
+    degreeInput.placeholder = 'Degree';
+    degreeInput.value = degree;
+
+    const schoolInput = document.createElement('input');
+    schoolInput.type = 'text';
+    schoolInput.className = 'education-school';
+    schoolInput.placeholder = 'School/University';
+    schoolInput.value = school;
+
+    const dateInput = document.createElement('input');
+    dateInput.type = 'text';
+    dateInput.className = 'education-date';
+    dateInput.placeholder = 'Dates (e.g., 2018-2022)';
+    dateInput.value = dates;
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.className = 'delete-btn';
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.addEventListener('click', () => {
+      block.remove();
+      updateEducationPreview();
+    });
+
+    [degreeInput, schoolInput, dateInput].forEach(inp => {
+      inp.addEventListener('input', updateEducationPreview);
+      inp.style.marginBottom = '8px';
+      block.appendChild(inp);
+    });
+
+    block.appendChild(deleteBtn);
+    return block;
+  }
+
+  // Initially attach listener to the default education item
+  (function ensureInitialEducationBlock() {
+    const existing = educationFormContainer.querySelectorAll('.education-item input');
+    existing.forEach(i => i.addEventListener('input', updateEducationPreview));
+  })();
+
+  addEducationBtn.addEventListener('click', () => {
+    const newBlock = createEducationFormBlock();
+    educationFormContainer.appendChild(newBlock);
+    newBlock.querySelector('.education-degree').focus();
+    updateEducationPreview();
+  });
+
+  function updateEducationPreview() {
+    // Clear preview
+    previewEducation.innerHTML = '';
+    const blocks = educationFormContainer.querySelectorAll('.education-item');
+
+    let any = false;
+    blocks.forEach(block => {
+      const degree = block.querySelector('.education-degree')?.value?.trim() || '';
+      const school = block.querySelector('.education-school')?.value?.trim() || '';
+      const dates = block.querySelector('.education-date')?.value?.trim() || '';
+
+      if (degree || school || dates) {
+        any = true;
+        const entry = document.createElement('div');
+        entry.className = 'education-item';
+
+        if (degree) {
+          const ttl = document.createElement('div');
+          ttl.className = 'item-title';
+          ttl.textContent = degree;
+          entry.appendChild(ttl);
+        }
+        if (school) {
+          const sub = document.createElement('div');
+          sub.className = 'item-subtitle';
+          sub.textContent = school;
+          entry.appendChild(sub);
+        }
+        if (dates) {
+          const dat = document.createElement('div');
+          dat.className = 'item-date';
+          dat.textContent = dates;
+          entry.appendChild(dat);
+        }
+
+        previewEducation.appendChild(entry);
+      }
+    });
+
+    if (!any) {
+      previewEducation.innerHTML = '<div class="empty-state"><p>Your education details will appear here.</p></div>';
+    }
+  }
+
+  // -----------------------
+  // Experience (form blocks + preview) - Fixed version
+  // -----------------------
+  function createExperienceFormBlock(position = '', company = '', dates = '', description = '') {
+    const block = document.createElement('div');
+    block.className = 'experience-item';
+
+    const positionInput = document.createElement('input');
+    positionInput.type = 'text';
+    positionInput.className = 'experience-position';
+    positionInput.placeholder = 'Position';
+    positionInput.value = position;
+
+    const companyInput = document.createElement('input');
+    companyInput.type = 'text';
+    companyInput.className = 'experience-company';
+    companyInput.placeholder = 'Company';
+    companyInput.value = company;
+
+    const dateInput = document.createElement('input');
+    dateInput.type = 'text';
+    dateInput.className = 'experience-date';
+    dateInput.placeholder = 'Dates (e.g., 2020-Present)';
+    dateInput.value = dates;
+
+    const descInput = document.createElement('textarea');
+    descInput.className = 'experience-description';
+    descInput.placeholder = 'Description';
+    descInput.value = description;
+    descInput.style.minHeight = '80px';
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.className = 'delete-btn';
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.addEventListener('click', () => {
+      block.remove();
+      updateExperiencePreview();
+    });
+
+    [positionInput, companyInput, dateInput, descInput].forEach(inp => {
+      inp.addEventListener('input', updateExperiencePreview);
+      inp.style.marginBottom = '8px';
+      block.appendChild(inp);
+    });
+
+    block.appendChild(deleteBtn);
+    return block;
+  }
+
+  // Initialize experience blocks
+  (function initExperienceBlocks() {
+    const existing = experienceFormContainer.querySelectorAll('.experience-item');
+    existing.forEach(block => {
+      const inputs = block.querySelectorAll('input, textarea');
+      inputs.forEach(inp => inp.addEventListener('input', updateExperiencePreview));
+    });
+  })();
+
+  addExperienceBtn.addEventListener('click', () => {
+    const newBlock = createExperienceFormBlock();
+    experienceFormContainer.appendChild(newBlock);
+    newBlock.querySelector('.experience-position').focus();
+    updateExperiencePreview();
+  });
+
+  function updateExperiencePreview() {
+    previewExperience.innerHTML = '';
+    const blocks = experienceFormContainer.querySelectorAll('.experience-item');
+    let any = false;
+
+    blocks.forEach(block => {
+      const position = block.querySelector('.experience-position')?.value?.trim() || '';
+      const company = block.querySelector('.experience-company')?.value?.trim() || '';
+      const dates = block.querySelector('.experience-date')?.value?.trim() || '';
+      const description = block.querySelector('.experience-description')?.value?.trim() || '';
+
+      if (position || company || dates || description) {
+        any = true;
+        const entry = document.createElement('div');
+        entry.className = 'experience-item';
+
+        if (position) {
+          const ttl = document.createElement('div');
+          ttl.className = 'item-title';
+          ttl.textContent = position;
+          entry.appendChild(ttl);
+        }
+        if (company) {
+          const sub = document.createElement('div');
+          sub.className = 'item-subtitle';
+          sub.textContent = company;
+          entry.appendChild(sub);
+        }
+        if (dates) {
+          const dat = document.createElement('div');
+          dat.className = 'item-date';
+          dat.textContent = dates;
+          entry.appendChild(dat);
+        }
+        if (description) {
+          const desc = document.createElement('p');
+          desc.textContent = description;
+          entry.appendChild(desc);
+        }
+
+        previewExperience.appendChild(entry);
+      }
+    });
+
+    if (!any) {
+      previewExperience.innerHTML = '<div class="empty-state"><p>Your work experience will appear here.</p></div>';
+    }
+  }
+
+  // -----------------------
+  // Contact section - Fixed version
+  // -----------------------
+  function updateContactSection() {
+    const emailEl = document.querySelector('.contact-email');
+    const phoneEl = document.querySelector('.contact-phone');
+    const locationEl = document.querySelector('.contact-location');
+    const socialLinksEl = document.querySelector('.social-links');
+
+    if (emailEl) emailEl.textContent = 'Email: ' + (emailInput.value.trim() || 'your.email@example.com');
+    if (phoneEl) phoneEl.textContent = 'Phone: ' + (phoneInput.value.trim() || '+1 (555) 123-4567');
+    if (locationEl) locationEl.textContent = 'Location: ' + (locationInput.value.trim() || 'Your Location');
+
+    // Update social links
+    if (socialLinksEl) {
+      socialLinksEl.innerHTML = '';
+      
+      const socials = [
+        { input: linkedinInput, text: 'in' },
+        { input: githubInput, text: 'gh' },
+        { input: twitterInput, text: 'tw' },
+        { input: websiteInput, text: 'www' }
+      ];
+
+      socials.forEach(social => {
+        if (social.input.value.trim()) {
+          const link = document.createElement('a');
+          link.href = social.input.value.trim();
+          link.className = 'social-link';
+          link.textContent = social.text;
+          link.target = '_blank';
+          socialLinksEl.appendChild(link);
+        }
+      });
+
+      // If no social links, show default ones
+      if (socialLinksEl.children.length === 0) {
+        ['in', 'gh', 'tw'].forEach(text => {
+          const link = document.createElement('a');
+          link.href = '#';
+          link.className = 'social-link';
+          link.textContent = text;
+          socialLinksEl.appendChild(link);
+        });
+      }
+    }
+  }
+
+  // -----------------------
+  // Basic preview updates
+  // -----------------------
+  function updateBasicPreview() {
+    const nameEl = document.querySelector('.portfolio-name');
+    const titleEl = document.querySelector('.portfolio-title');
+    const bioEl = document.querySelector('.portfolio-bio');
+
+    if (nameEl) nameEl.textContent = fullNameInput.value.trim() || 'Your Name';
+    if (titleEl) titleEl.textContent = jobTitleInput.value.trim() || 'Your Job Title';
+    if (bioEl) bioEl.textContent = bioInput.value.trim() || 'Your bio will appear here.';
+
+    updateContactSection();
+  }
+
+  // -----------------------
+  // Wire input events to update preview
+  // -----------------------
+  [fullNameInput, jobTitleInput, bioInput].forEach(el => {
+    if (el) el.addEventListener('input', updateBasicPreview);
+  });
+
+  [emailInput, phoneInput, locationInput, linkedinInput, githubInput, twitterInput, websiteInput].forEach(el => {
+    if (el) el.addEventListener('input', updateContactSection);
+  });
+
+  // -----------------------
+  // Reset form
+  // -----------------------
+  function resetForm() {
+    // Clear text inputs & textareas
+    document.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], textarea').forEach(i => {
+      if (!i.classList.contains('add-item-btn') && !i.classList.contains('delete-btn')) {
+        i.value = '';
+      }
+    });
+
+    // Reset skills
+    skills = ['HTML', 'CSS', 'JavaScript'];
+    renderSkillsForm();
+    renderSkillsPreview();
+
+    // Reset education: remove all and add one empty block
+    educationFormContainer.innerHTML = '';
+    educationFormContainer.appendChild(createEducationFormBlock());
+    updateEducationPreview();
+
+    // Reset experience: remove all and add one empty block
+    experienceFormContainer.innerHTML = '';
+    experienceFormContainer.appendChild(createExperienceFormBlock());
+    updateExperiencePreview();
+
+    // Reset template selection
+    templateOptions.forEach((opt, index) => {
+      opt.classList.toggle('selected', index === 0);
+    });
+    portfolioPreview.className = 'portfolio-template template-1';
+
+    // Update all previews
+    updateBasicPreview();
+    showNotification('Form reset successfully!');
+  }
+
+  resetBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    resetForm();
+  });
+
+  // -----------------------
+  // Export (download HTML)
+  // -----------------------
+exportBtn.addEventListener('click', function() {
+    // Ensure preview is up-to-date
+    updateBasicPreview();
+    updateEducationPreview();
+    updateExperiencePreview();
+    renderSkillsPreview();
+
+    // Create a new HTML document
+    var exportDoc = document.implementation.createHTMLDocument('Exported Portfolio');
+
+    // Clone all <style> elements into the new document
+    document.querySelectorAll('head style').forEach(function(style) {
+        exportDoc.head.appendChild(style.cloneNode(true));
+    });
+
+    // Clone the portfolio preview into the body
+    exportDoc.body.appendChild(portfolioPreview.cloneNode(true));
+
+    // Serialize the new document to a string
+    var serializer = new XMLSerializer();
+    var htmlString = serializer.serializeToString(exportDoc);
+
+    // Create and download the file
+    var blob = new Blob([htmlString], { type: 'text/html' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'portfolio.html';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    showNotification('Portfolio exported!');
+});
+
+  // -----------------------
+  // Initial render calls
+  // -----------------------
+  renderSkillsForm();
+  renderSkillsPreview();
+  updateBasicPreview();
+  updateEducationPreview();
+  updateExperiencePreview();
+
+});
+</script>
+</body>
+</html>
