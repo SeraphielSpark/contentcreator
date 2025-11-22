@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreelanceFlow | Task Management</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --success: #4cc9f0;
+            --warning: #f72585;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --light-gray: #e9ecef;
+            --border-radius: 8px;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            background-color: #f5f7fb;
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .logo i {
+            font-size: 2rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .stat-card i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+
+        .stat-card h3 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            color: var(--gray);
+        }
+
+        .kanban-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .kanban-column {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            max-height: 70vh;
+        }
+
+        .column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--light-gray);
+        }
+
+        .column-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .task-count {
+            background: var(--light-gray);
+            color: var(--gray);
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+
+        .add-task-btn {
+            background: none;
+            border: none;
+            color: var(--gray);
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: var(--transition);
+        }
+
+        .preview-banner {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    color: white;
+    padding: 12px 0;
+    text-align: center;
+    position: relative;
+}
+
+.preview-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.close-preview-banner {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    position: absolute;
+    right: 20px;
+}
+
+.contact-section {
+    background: var(--dark);
+    color: white;
+    padding: 50px 0;
+    margin-top: 50px;
+}
+
+.contact-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px;
+    text-align: center;
+}
+
+.contact-info {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin: 30px 0;
+    flex-wrap: wrap;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.contact-btn {
+    margin-top: 20px;
+}
+        .add-task-btn:hover {
+            color: var(--primary);
+        }
+
+        .tasks-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .task {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid var(--primary);
+            cursor: move;
+            transition: var(--transition);
+        }
+
+        .task:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .task-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .task-priority {
+            font-size: 0.8rem;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .priority-high {
+            background: #ffe6e6;
+            color: #d00000;
+        }
+
+        .priority-medium {
+            background: #fff4e6;
+            color: #e85d04;
+        }
+
+        .priority-low {
+            background: #e6f7ff;
+            color: #0077b6;
+        }
+
+        .task-description {
+            color: var(--gray);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+
+        .task-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--gray);
+        }
+
+        .task-date {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .task-action-btn {
+            background: none;
+            border: none;
+            color: var(--gray);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .task-action-btn:hover {
+            color: var(--primary);
+        }
+
+        .task.dragging {
+            opacity: 0.5;
+            transform: rotate(5deg);
+        }
+
+        .column.drag-over {
+            background-color: #f0f8ff;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 500px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 30px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--gray);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid var(--light-gray);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary);
+        }
+
+        .btn-secondary {
+            background: var(--light-gray);
+            color: var(--dark);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray);
+            color: white;
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 0;
+            color: var(--gray);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: var(--light-gray);
+        }
+
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 80vh;
+        }
+
+        .auth-card {
+            background: white;
+            width: 90%;
+            max-width: 400px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 30px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background: none;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .auth-tab.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .form-footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+
+        .form-footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .kanban-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats {
+                grid-template-columns: 1fr;
+            }
+            
+            header {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-banner">
+    <div class="preview-content">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>This is a preview version. For deployment-ready solution, contact me at <strong><a style="color: inherit; text-decoration: none;" href="wa.me/2348120505881">WhatsApp</a></strong></span>
+        <button class="close-preview-banner">&times;</button>
+    </div>
+</div>
+    <!-- Authentication Section -->
+    <div id="authSection" class="container auth-container">
+        <div class="auth-card">
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">Login</button>
+                <button class="auth-tab" data-tab="signup">Sign Up</button>
+            </div>
+            
+            <form id="loginForm" class="auth-form active">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" class="form-control" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" class="form-control" placeholder="Enter your password" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Login</button>
+                <div class="form-footer">
+                    <a href="#" id="forgotPassword">Forgot your password?</a>
+                </div>
+            </form>
+            
+            <form id="signupForm" class="auth-form">
+                <div class="form-group">
+                    <label for="signupName">Full Name</label>
+                    <input type="text" id="signupName" class="form-control" placeholder="Enter your full name" required>
+                </div>
+                <div class="form-group">
+                    <label for="signupEmail">Email</label>
+                    <input type="email" id="signupEmail" class="form-control" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label for="signupPassword">Password</label>
+                    <input type="password" id="signupPassword" class="form-control" placeholder="Create a password" required>
+                </div>
+                <div class="form-group">
+                    <label for="signupConfirmPassword">Confirm Password</label>
+                    <input type="password" id="signupConfirmPassword" class="form-control" placeholder="Confirm your password" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Application (Initially Hidden) -->
+    <div id="appSection" class="container hidden">
+        <header>
+            <div class="logo">
+                <i class="fas fa-tasks"></i>
+                <span>FreelanceFlow</span>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">U</div>
+                <div>
+                    <div id="userName">User</div>
+                    <div style="font-size: 0.8rem; color: var(--gray);">Freelancer</div>
+                </div>
+                <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+            </div>
+        </header>
+
+        <div class="stats">
+            <div class="stat-card">
+                <i class="fas fa-list-check"></i>
+                <h3 id="totalTasks">0</h3>
+                <p>Total Tasks</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-spinner"></i>
+                <h3 id="inProgressTasks">0</h3>
+                <p>In Progress</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-check-circle"></i>
+                <h3 id="completedTasks">0</h3>
+                <p>Completed</p>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-clock"></i>
+                <h3 id="overdueTasks">0</h3>
+                <p>Overdue</p>
+            </div>
+        </div>
+
+        <div class="kanban-container">
+            <!-- To Do Column -->
+            <div class="kanban-column" id="todo-column">
+                <div class="column-header">
+                    <div class="column-title">
+                        <i class="fas fa-clipboard-list"></i>
+                        To Do
+                        <span class="task-count" id="todo-count">0</span>
+                    </div>
+                    <button class="add-task-btn" data-column="todo">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="tasks-container" id="todo-tasks">
+                    <div class="empty-state">
+                        <i class="fas fa-clipboard-list"></i>
+                        <p>No tasks yet</p>
+                        <p>Add a task to get started</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- In Progress Column -->
+            <div class="kanban-column" id="progress-column">
+                <div class="column-header">
+                    <div class="column-title">
+                        <i class="fas fa-spinner"></i>
+                        In Progress
+                        <span class="task-count" id="progress-count">0</span>
+                    </div>
+                    <button class="add-task-btn" data-column="progress">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="tasks-container" id="progress-tasks">
+                    <div class="empty-state">
+                        <i class="fas fa-spinner"></i>
+                        <p>No tasks in progress</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review Column -->
+            <div class="kanban-column" id="review-column">
+                <div class="column-header">
+                    <div class="column-title">
+                        <i class="fas fa-search"></i>
+                        Review
+                        <span class="task-count" id="review-count">0</span>
+                    </div>
+                    <button class="add-task-btn" data-column="review">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="tasks-container" id="review-tasks">
+                    <div class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <p>No tasks in review</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Done Column -->
+            <div class="kanban-column" id="done-column">
+                <div class="column-header">
+                    <div class="column-title">
+                        <i class="fas fa-check-circle"></i>
+                        Done
+                        <span class="task-count" id="done-count">0</span>
+                    </div>
+                    <button class="add-task-btn" data-column="done">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="tasks-container" id="done-tasks">
+                    <div class="empty-state">
+                        <i class="fas fa-check-circle"></i>
+                        <p>No completed tasks</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Task Modal -->
+    <div class="modal" id="taskModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New Task</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="taskForm">
+                <div class="form-group">
+                    <label for="taskTitle">Task Title</label>
+                    <input type="text" id="taskTitle" class="form-control" placeholder="Enter task title" required>
+                </div>
+                <div class="form-group">
+                    <label for="taskDescription">Description</label>
+                    <textarea id="taskDescription" class="form-control" rows="3" placeholder="Enter task description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="taskPriority">Priority</label>
+                    <select id="taskPriority" class="form-control">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="taskDueDate">Due Date</label>
+                    <input type="date" id="taskDueDate" class="form-control">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Add Task</button>
+            </form>
+        </div>
+    </div>
+<div class="contact-section">
+    <div class="contact-content">
+        <h3>Ready to Deploy This Solution?</h3>
+        <p>This is a functional preview. For a production-ready version with backend integration, user management, and advanced features, contact our team.</p>
+        <div class="contact-info">
+            <div class="contact-item">
+                <i class="fas fa-envelope"></i>
+                <span>taiwoemmanuel435@gmail.com</span>
+            </div>
+            <div class="contact-item">
+                <i class="fas fa-phone"></i>
+                <span>+234 8120505881</span>
+            </div>
+        </div>
+        <button class="btn btn-primary contact-btn">Get in Touch</button>
+    </div>
+</div>
+    <script>
+        // Application State
+        const appState = {
+            currentUser: null,
+            users: JSON.parse(localStorage.getItem('freelanceFlowUsers')) || [],
+            tasks: JSON.parse(localStorage.getItem('freelanceFlowTasks')) || {},
+            currentColumn: 'todo'
+        };
+
+        // DOM Elements
+        const authSection = document.getElementById('authSection');
+        const appSection = document.getElementById('appSection');
+        const taskModal = document.getElementById('taskModal');
+        const taskForm = document.getElementById('taskForm');
+        const addTaskButtons = document.querySelectorAll('.add-task-btn');
+        const closeModalButton = document.querySelector('.close-modal');
+        const tasksContainers = document.querySelectorAll('.tasks-container');
+        const kanbanColumns = document.querySelectorAll('.kanban-column');
+        const authTabs = document.querySelectorAll('.auth-tab');
+        const loginForm = document.getElementById('loginForm');
+        const signupForm = document.getElementById('signupForm');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userName = document.getElementById('userName');
+        const userAvatar = document.getElementById('userAvatar');
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if user is already logged in
+            const currentUser = JSON.parse(localStorage.getItem('freelanceFlowCurrentUser'));
+            if (currentUser) {
+                loginUser(currentUser);
+            }
+
+            // Set up event listeners
+            setupEventListeners();
+        });
+
+        // Set up all event listeners
+        function setupEventListeners() {
+            // Auth tab switching
+            authTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabName = tab.getAttribute('data-tab');
+                    switchAuthTab(tabName);
+                });
+            });
+
+            // Auth form submissions
+            loginForm.addEventListener('submit', handleLogin);
+            signupForm.addEventListener('submit', handleSignup);
+            logoutBtn.addEventListener('click', handleLogout);
+
+            // Task management
+            addTaskButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    appState.currentColumn = button.getAttribute('data-column');
+                    taskModal.style.display = 'flex';
+                });
+            });
+
+            closeModalButton.addEventListener('click', () => {
+                taskModal.style.display = 'none';
+            });
+
+            window.addEventListener('click', (e) => {
+                if (e.target === taskModal) {
+                    taskModal.style.display = 'none';
+                }
+            });
+
+            taskForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                addNewTask();
+                taskModal.style.display = 'none';
+                taskForm.reset();
+            });
+
+            // Drag and drop setup
+            kanbanColumns.forEach(column => {
+                column.addEventListener('dragover', handleDragOver);
+                column.addEventListener('dragenter', handleDragEnter);
+                column.addEventListener('dragleave', handleDragLeave);
+                column.addEventListener('drop', handleDrop);
+            });
+        }
+
+        // Auth Functions
+        function switchAuthTab(tabName) {
+            authTabs.forEach(tab => {
+                if (tab.getAttribute('data-tab') === tabName) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+
+            document.querySelectorAll('.auth-form').forEach(form => {
+                if (form.id === `${tabName}Form`) {
+                    form.classList.add('active');
+                } else {
+                    form.classList.remove('active');
+                }
+            });
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            // Simple validation - in a real app, this would be more secure
+            const user = appState.users.find(u => u.email === email && u.password === password);
+            
+            if (user) {
+                loginUser(user);
+            } else {
+                alert('Invalid email or password. Please try again.');
+            }
+        }
+
+        function handleSignup(e) {
+            e.preventDefault();
+            const name = document.getElementById('signupName').value;
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const confirmPassword = document.getElementById('signupConfirmPassword').value;
+
+            if (password !== confirmPassword) {
+                alert('Passwords do not match. Please try again.');
+                return;
+            }
+
+            // Check if user already exists
+            if (appState.users.find(u => u.email === email)) {
+                alert('An account with this email already exists.');
+                return;
+            }
+
+            // Create new user
+            const newUser = {
+                id: Date.now().toString(),
+                name,
+                email,
+                password, // In a real app, this would be hashed
+                avatar: name.charAt(0).toUpperCase()
+            };
+
+            appState.users.push(newUser);
+            localStorage.setItem('freelanceFlowUsers', JSON.stringify(appState.users));
+            
+            // Initialize empty task list for new user
+            appState.tasks[newUser.id] = [];
+            localStorage.setItem('freelanceFlowTasks', JSON.stringify(appState.tasks));
+            
+            loginUser(newUser);
+        }
+
+        function loginUser(user) {
+            appState.currentUser = user;
+            localStorage.setItem('freelanceFlowCurrentUser', JSON.stringify(user));
+            
+            // Update UI
+            userName.textContent = user.name;
+            userAvatar.textContent = user.avatar;
+            
+            // Switch to app view
+            authSection.classList.add('hidden');
+            appSection.classList.remove('hidden');
+            
+            // Load user's tasks
+            loadUserTasks();
+        }
+
+        function handleLogout() {
+            appState.currentUser = null;
+            localStorage.removeItem('freelanceFlowCurrentUser');
+            
+            // Switch to auth view
+            authSection.classList.remove('hidden');
+            appSection.classList.add('hidden');
+            
+            // Reset forms
+            loginForm.reset();
+            signupForm.reset();
+            switchAuthTab('login');
+        }
+
+        // Task Management Functions
+        function loadUserTasks() {
+            if (!appState.currentUser) return;
+            
+            const userTasks = appState.tasks[appState.currentUser.id] || [];
+            
+            // Clear all columns
+            document.querySelectorAll('.tasks-container').forEach(container => {
+                container.innerHTML = '';
+            });
+            
+            // Add empty state messages
+            document.getElementById('todo-tasks').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-clipboard-list"></i>
+                    <p>No tasks yet</p>
+                    <p>Add a task to get started</p>
+                </div>
+            `;
+            
+            document.getElementById('progress-tasks').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-spinner"></i>
+                    <p>No tasks in progress</p>
+                </div>
+            `;
+            
+            document.getElementById('review-tasks').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-search"></i>
+                    <p>No tasks in review</p>
+                </div>
+            `;
+            
+            document.getElementById('done-tasks').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-check-circle"></i>
+                    <p>No completed tasks</p>
+                </div>
+            `;
+            
+            // Add tasks to their respective columns
+            userTasks.forEach(task => {
+                addTaskToColumn(task, task.column, false);
+            });
+            
+            // Update counts
+            updateTaskCounts();
+        }
+        // Close preview banner
+document.querySelector('.close-preview-banner').addEventListener('click', function() {
+    document.querySelector('.preview-banner').style.display = 'none';
+});
+
+// Contact button
+document.querySelector('.contact-btn').addEventListener('click', function() {
+    window.location.href = 'mailto:contact@freelanceflow.com?subject=FreelanceFlow Deployment Inquiry';
+});
+        function addNewTask() {
+            if (!appState.currentUser) return;
+            
+            const title = document.getElementById('taskTitle').value;
+            const description = document.getElementById('taskDescription').value;
+            const priority = document.getElementById('taskPriority').value;
+            const dueDate = document.getElementById('taskDueDate').value;
+            
+            const task = {
+                id: Date.now().toString(),
+                title,
+                description,
+                priority,
+                dueDate,
+                column: appState.currentColumn,
+                createdAt: new Date().toISOString(),
+                userId: appState.currentUser.id
+            };
+            
+            // Add to user's task list
+            if (!appState.tasks[appState.currentUser.id]) {
+                appState.tasks[appState.currentUser.id] = [];
+            }
+            
+            appState.tasks[appState.currentUser.id].push(task);
+            localStorage.setItem('freelanceFlowTasks', JSON.stringify(appState.tasks));
+            
+            // Add to UI
+            addTaskToColumn(task, appState.currentColumn, true);
+            
+            // Update counts
+            updateTaskCounts();
+        }
+
+        function addTaskToColumn(task, column, isNew = false) {
+            const container = document.getElementById(`${column}-tasks`);
+            
+            // Remove empty state if this is the first task
+            if (container.querySelector('.empty-state')) {
+                container.innerHTML = '';
+            }
+            
+            const taskElement = document.createElement('div');
+            taskElement.className = 'task';
+            taskElement.setAttribute('draggable', 'true');
+            taskElement.setAttribute('data-id', task.id);
+            
+            const priorityClass = `priority-${task.priority}`;
+            const priorityText = task.priority.charAt(0).toUpperCase() + task.priority.slice(1);
+            
+            const formattedDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No due date';
+            
+            taskElement.innerHTML = `
+                <div class="task-header">
+                    <div class="task-title">${task.title}</div>
+                    <div class="task-priority ${priorityClass}">${priorityText}</div>
+                </div>
+                <div class="task-description">${task.description}</div>
+                <div class="task-footer">
+                    <div class="task-date">
+                        <i class="far fa-calendar"></i>
+                        Due: ${formattedDate}
+                    </div>
+                    <div class="task-actions">
+                        <button class="task-action-btn edit-task"><i class="far fa-edit"></i></button>
+                        <button class="task-action-btn delete-task"><i class="far fa-trash-alt"></i></button>
+                    </div>
+                </div>
+            `;
+            
+            // Add drag events to the task
+            taskElement.addEventListener('dragstart', handleDragStart);
+            taskElement.addEventListener('dragend', handleDragEnd);
+            
+            // Add edit and delete functionality
+            const editBtn = taskElement.querySelector('.edit-task');
+            const deleteBtn = taskElement.querySelector('.delete-task');
+            
+            editBtn.addEventListener('click', () => editTask(task.id));
+            deleteBtn.addEventListener('click', () => deleteTask(task.id));
+            
+            if (isNew) {
+                container.appendChild(taskElement);
+            } else {
+                container.appendChild(taskElement);
+            }
+        }
+
+        function editTask(taskId) {
+            // In a real app, this would open an edit modal
+            alert('Edit functionality would be implemented here with a backend.');
+        }
+
+        function deleteTask(taskId) {
+            if (!appState.currentUser) return;
+            
+            if (confirm('Are you sure you want to delete this task?')) {
+                // Remove from data
+                appState.tasks[appState.currentUser.id] = appState.tasks[appState.currentUser.id].filter(task => task.id !== taskId);
+                localStorage.setItem('freelanceFlowTasks', JSON.stringify(appState.tasks));
+                
+                // Remove from UI
+                const taskElement = document.querySelector(`.task[data-id="${taskId}"]`);
+                if (taskElement) {
+                    const container = taskElement.parentElement;
+                    taskElement.remove();
+                    
+                    // Add empty state if no tasks left
+                    if (container.children.length === 0) {
+                        const columnId = container.id.replace('-tasks', '');
+                        const emptyStateIcons = {
+                            'todo': 'clipboard-list',
+                            'progress': 'spinner',
+                            'review': 'search',
+                            'done': 'check-circle'
+                        };
+                        
+                        container.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-${emptyStateIcons[columnId]}"></i>
+                                <p>No ${columnId === 'todo' ? 'tasks yet' : columnId === 'progress' ? 'tasks in progress' : columnId === 'review' ? 'tasks in review' : 'completed tasks'}</p>
+                            </div>
+                        `;
+                    }
+                }
+                
+                // Update counts
+                updateTaskCounts();
+            }
+        }
+
+        // Drag and Drop Functionality
+        let draggedTask = null;
+
+        function handleDragStart(e) {
+            draggedTask = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+        }
+
+        function handleDragEnd() {
+            this.classList.remove('dragging');
+            kanbanColumns.forEach(column => {
+                column.classList.remove('drag-over');
+            });
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            return false;
+        }
+
+        function handleDragEnter(e) {
+            this.classList.add('drag-over');
+        }
+
+        function handleDragLeave() {
+            this.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.stopPropagation();
+            this.classList.remove('drag-over');
+            
+            if (draggedTask && draggedTask !== this) {
+                const tasksContainer = this.querySelector('.tasks-container');
+                const taskId = draggedTask.getAttribute('data-id');
+                const newColumn = this.id.replace('-column', '');
+                
+                // Remove empty state if present
+                if (tasksContainer.querySelector('.empty-state')) {
+                    tasksContainer.innerHTML = '';
+                }
+                
+                // Move task in UI
+                tasksContainer.appendChild(draggedTask);
+                
+                // Update task data
+                if (appState.currentUser) {
+                    const taskIndex = appState.tasks[appState.currentUser.id].findIndex(task => task.id === taskId);
+                    if (taskIndex !== -1) {
+                        appState.tasks[appState.currentUser.id][taskIndex].column = newColumn;
+                        localStorage.setItem('freelanceFlowTasks', JSON.stringify(appState.tasks));
+                    }
+                }
+                
+                // Update task counts
+                updateTaskCounts();
+            }
+            
+            return false;
+        }
+
+        // Update Task Counts
+        function updateTaskCounts() {
+            if (!appState.currentUser) return;
+            
+            const userTasks = appState.tasks[appState.currentUser.id] || [];
+            
+            // Count tasks by column
+            const todoCount = userTasks.filter(task => task.column === 'todo').length;
+            const progressCount = userTasks.filter(task => task.column === 'progress').length;
+            const reviewCount = userTasks.filter(task => task.column === 'review').length;
+            const doneCount = userTasks.filter(task => task.column === 'done').length;
+            
+            // Update column counts
+            document.getElementById('todo-count').textContent = todoCount;
+            document.getElementById('progress-count').textContent = progressCount;
+            document.getElementById('review-count').textContent = reviewCount;
+            document.getElementById('done-count').textContent = doneCount;
+            
+            // Update stats
+            document.getElementById('totalTasks').textContent = userTasks.length;
+            document.getElementById('inProgressTasks').textContent = progressCount;
+            document.getElementById('completedTasks').textContent = doneCount;
+            
+            // Calculate overdue tasks (simplified - just tasks in todo with past due date)
+            const today = new Date();
+            const overdueCount = userTasks.filter(task => 
+                task.column !== 'done' && 
+                task.dueDate && 
+                new Date(task.dueDate) < today
+            ).length;
+            
+            document.getElementById('overdueTasks').textContent = overdueCount;
+        }
+    </script>
+</body>
+</html>
