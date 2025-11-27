@@ -1,23 +1,26 @@
-# backend/app.py
+# app.py
 from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_cors import CORS
 from datetime import datetime
 import uuid
 import re
+import os
 
+# Create Flask app instance
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'isightu-secret-key-2024'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'isightu-secret-key-2024')
 CORS(app)
+
+# Configure SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# In-memory storage (replace with database in production)
+# In-memory storage
 users = {}
 chats = {}
 messages = {}
 online_users = set()
-contacts = {}  # user_phone -> list of contact phones
-contact_requests = {}  # to_phone -> list of request objects
+contacts = {}
 
 def validate_phone_number(phone):
     """Validate phone number format"""
@@ -46,7 +49,6 @@ def register_user():
         if not validate_phone_number(phone):
             return jsonify({"error": "Invalid phone number format"}), 400
         
-        # Check if user already exists
         if phone in users:
             return jsonify({"error": "User already exists"}), 400
         
@@ -62,7 +64,6 @@ def register_user():
             "profile_status": "Available"
         }
         
-        # Initialize contacts list
         contacts[phone] = []
         
         return jsonify({
@@ -87,7 +88,6 @@ def login_user():
         if not user:
             return jsonify({"error": "User not found. Please register first."}), 404
         
-        # Update last seen and online status
         user['last_seen'] = datetime.now().isoformat()
         user['is_online'] = True
         online_users.add(phone)
@@ -107,7 +107,6 @@ def get_users():
 
 @app.route('/api/users/search/<phone>', methods=['GET'])
 def search_user(phone):
-    """Search for a user by phone number"""
     current_user = request.args.get('current_user')
     
     if not validate_phone_number(phone):
@@ -117,7 +116,6 @@ def search_user(phone):
     if not user:
         return jsonify({"found": False, "message": "User not found on iSightU"})
     
-    # Check if already in contacts
     is_contact = phone in contacts.get(current_user, [])
     
     return jsonify({
@@ -204,7 +202,6 @@ def get_chats():
             chat_messages = messages.get(chat_id, [])
             last_message = chat_messages[-1] if chat_messages else None
             
-            # Get other participant's info for direct chats
             other_participants = [p for p in chat_data['participants'] if p != user_phone]
             other_user = users.get(other_participants[0]) if other_participants and len(other_participants) == 1 else None
             
@@ -281,13 +278,11 @@ def handle_create_chat(data):
         participants = data.get('participants', [])
         chat_name = data.get('name', 'Direct Chat')
         
-        # Create consistent chat ID for direct chats
         if len(participants) == 2:
             chat_id = '_'.join(sorted(participants))
         else:
             chat_id = str(uuid.uuid4())
         
-        # Check if chat already exists
         if chat_id not in chats:
             chats[chat_id] = {
                 'id': chat_id,
@@ -297,14 +292,11 @@ def handle_create_chat(data):
                 'is_group': len(participants) > 2
             }
             
-            # Initialize messages array for this chat
             if chat_id not in messages:
                 messages[chat_id] = []
         
-        # Return chat info to creator
         emit('chat_created', chats[chat_id])
         
-        # Notify all participants
         for participant in participants:
             emit('chat_created', chats[chat_id], room=participant)
                 
@@ -333,13 +325,11 @@ def handle_send_message(data):
             'type': 'text'
         }
         
-        # Initialize messages array if not exists
         if chat_id not in messages:
             messages[chat_id] = []
         
         messages[chat_id].append(message)
         
-        # Broadcast to all participants in the chat room
         emit('new_message', message, room=chat_id)
         
         print(f'Message sent in chat {chat_id} by {user_phone}: {content}')
@@ -368,7 +358,7 @@ def handle_typing_stop(data):
         'is_typing': False
     }, room=chat_id)
 
-# Add some demo users on startup
+# Create demo users
 def create_demo_users():
     demo_users = [
         {'phone': '+1234567890', 'name': 'John Doe', 'status': 'Available'},
@@ -395,11 +385,14 @@ def create_demo_users():
             contacts[user_data['phone']] = []
             online_users.add(user_data['phone'])
 
+create_demo_users()
+
 if __name__ == '__main__':
-    create_demo_users()
-    print("🚀 iSightU Chat Server starting on http://127.0.0.1:5000")
+    port = int(os.environ.get('PORT', 5000))
+    print(f"🚀 iSightU Chat Server starting on port {port}")
     print("📞 Demo users created:")
     for phone, user in users.items():
         print(f"   - {user['name']}: {phone} ({user['status']})")
     print("💬 Ready for real-time messaging with contact management!")
-    socketio.run(app, debug=True, host='127.0.0.1', port=5000)
+    
+    socketio.run(app, host='0.0.0.0', port=port, debug=False)
