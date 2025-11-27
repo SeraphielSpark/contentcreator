@@ -7,7 +7,7 @@ import uuid
 import re
 import os
 
-# Create Flask app instance
+# Create Flask app instance - make sure this is at the top level
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'isightu-secret-key-2024')
 CORS(app)
@@ -387,6 +387,7 @@ def create_demo_users():
 
 create_demo_users()
 
+# This is important - make sure the app is properly exported
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print(f"🚀 iSightU Chat Server starting on port {port}")
