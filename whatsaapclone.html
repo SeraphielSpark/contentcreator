@@ -1,0 +1,2145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iSightU - Connect Instantly</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #007bff;
+            --primary-dark: #0056b3;
+            --secondary: #6c757d;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --info: #17a2b8;
+            --light: #f8f9fa;
+            --dark: #343a40;
+            --white: #ffffff;
+            --gray-100: #f8f9fa;
+            --gray-200: #e9ecef;
+            --gray-300: #dee2e6;
+            --gray-400: #ced4da;
+            --gray-500: #adb5bd;
+            --gray-600: #6c757d;
+            --gray-700: #495057;
+            --gray-800: #343a40;
+            --gray-900: #212529;
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --gradient-success: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+            --border-radius: 12px;
+            --border-radius-sm: 8px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--gradient-primary);
+            color: var(--gray-800);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Loading Bar */
+        #loadingBar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--primary);
+            z-index: 9999;
+            transition: width 0.3s ease;
+        }
+
+        .loading-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: var(--gradient-primary);
+            flex-direction: column;
+            color: var(--white);
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid var(--white);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        /* Auth Container */
+        .auth-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: var(--gradient-primary);
+            padding: 20px;
+        }
+
+        .auth-box {
+            background: var(--white);
+            padding: 40px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2.8em;
+            font-weight: bold;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .logo i {
+            font-size: 1.2em;
+        }
+
+        .tagline {
+            color: var(--gray-600);
+            margin-bottom: 30px;
+            font-size: 15px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 25px;
+            border-bottom: 2px solid var(--gray-200);
+            border-radius: var(--border-radius-sm) var(--border-radius-sm) 0 0;
+            overflow: hidden;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 15px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            color: var(--gray-600);
+        }
+
+        .auth-tab.active {
+            color: var(--primary);
+            background: rgba(0, 123, 255, 0.1);
+            border-bottom: 3px solid var(--primary);
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--gray-300);
+            border-radius: var(--border-radius-sm);
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: var(--white);
+        }
+
+        .auth-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+
+        .auth-button {
+            width: 100%;
+            padding: 15px;
+            background: var(--gradient-primary);
+            color: var(--white);
+            border: none;
+            border-radius: var(--border-radius-sm);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .auth-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .auth-button:active {
+            transform: translateY(0);
+        }
+
+        .error-message {
+            color: var(--danger);
+            font-size: 14px;
+            margin-top: 10px;
+            padding: 12px;
+            background: rgba(220, 53, 69, 0.1);
+            border-radius: var(--border-radius-sm);
+            display: none;
+            border-left: 4px solid var(--danger);
+        }
+
+        /* Main App */
+        .app-container {
+            display: flex;
+            height: 100vh;
+            background: var(--white);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 380px;
+            background: var(--white);
+            border-right: 1px solid var(--gray-200);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .profile-pic {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: bold;
+            font-size: 18px;
+            box-shadow: var(--shadow);
+        }
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: var(--gray-800);
+            font-size: 16px;
+        }
+
+        .user-phone {
+            font-size: 13px;
+            color: var(--gray-600);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .header-btn {
+            background: none;
+            border: none;
+            color: var(--gray-600);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .header-btn:hover {
+            background: var(--gray-100);
+            color: var(--primary);
+        }
+
+        .header-btn.active {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--danger);
+            color: var(--white);
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .search-box {
+            padding: 15px 20px;
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .search-container {
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 45px 12px 16px;
+            background: var(--gray-100);
+            border: 2px solid var(--gray-200);
+            border-radius: 25px;
+            color: var(--gray-700);
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: var(--white);
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-500);
+        }
+
+        .nav-tabs {
+            display: flex;
+            padding: 0 20px;
+            border-bottom: 1px solid var(--gray-200);
+            background: var(--white);
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 15px 0;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--gray-600);
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .nav-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .nav-tab i {
+            margin-right: 8px;
+        }
+
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--white);
+        }
+
+        .chat-list, .contacts-list, .discover-list {
+            padding: 0;
+        }
+
+        .chat-item, .contact-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--gray-100);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .chat-item:hover, .contact-item:hover {
+            background: var(--gray-50);
+        }
+
+        .chat-item.active {
+            background: rgba(0, 123, 255, 0.1);
+            border-left: 4px solid var(--primary);
+        }
+
+        .chat-avatar, .contact-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--gradient-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: bold;
+            font-size: 16px;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .chat-info, .contact-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .chat-header, .contact-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .chat-name, .contact-name {
+            font-weight: 600;
+            color: var(--gray-800);
+            font-size: 15px;
+        }
+
+        .chat-time {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .last-message {
+            font-size: 14px;
+            color: var(--gray-600);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .online-status {
+            position: absolute;
+            bottom: 15px;
+            left: 55px;
+            width: 12px;
+            height: 12px;
+            background: var(--success);
+            border: 2px solid var(--white);
+            border-radius: 50%;
+        }
+
+        .unread-badge {
+            background: var(--primary);
+            color: var(--white);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: auto;
+        }
+
+        /* Chat Area */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--gray-50);
+            border-left: 1px solid var(--gray-200);
+        }
+
+        .chat-header-main {
+            padding: 20px 25px;
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .chat-contact {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .contact-avatar-main {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--gradient-success);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .contact-info-main {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .contact-name-main {
+            font-weight: 600;
+            color: var(--gray-800);
+            font-size: 17px;
+        }
+
+        .contact-status {
+            font-size: 13px;
+            color: var(--gray-600);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .online-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+        }
+
+        .chat-actions {
+            display: flex;
+            gap: 20px;
+            color: var(--gray-600);
+        }
+
+        .chat-action-btn {
+            background: none;
+            border: none;
+            color: var(--gray-600);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            font-size: 18px;
+        }
+
+        .chat-action-btn:hover {
+            background: var(--gray-100);
+            color: var(--primary);
+        }
+
+        .messages-container {
+            flex: 1;
+            padding: 25px;
+            overflow-y: auto;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23e9ecef' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E");
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            animation: messageSlide 0.3s ease;
+        }
+
+        @keyframes messageSlide {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.sent {
+            justify-content: flex-end;
+        }
+
+        .message.received {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 15px 18px;
+            border-radius: 18px;
+            position: relative;
+            word-wrap: break-word;
+            box-shadow: var(--shadow);
+        }
+
+        .message.sent .message-content {
+            background: var(--gradient-primary);
+            color: var(--white);
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.received .message-content {
+            background: var(--white);
+            color: var(--gray-800);
+            border-bottom-left-radius: 5px;
+            border: 1px solid var(--gray-200);
+        }
+
+        .message-sender {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .message-time {
+            font-size: 11px;
+            margin-top: 5px;
+            text-align: right;
+            opacity: 0.8;
+        }
+
+        .message.received .message-time {
+            color: var(--gray-500);
+        }
+
+        .message.sent .message-time {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 15px 25px;
+            color: var(--gray-600);
+            font-style: italic;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--gray-500);
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .message-input-container {
+            padding: 20px 25px;
+            background: var(--white);
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .message-input-form {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .input-actions {
+            display: flex;
+            gap: 15px;
+            color: var(--gray-500);
+            padding-bottom: 12px;
+        }
+
+        .input-action-btn {
+            background: none;
+            border: none;
+            color: var(--gray-500);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            font-size: 20px;
+        }
+
+        .input-action-btn:hover {
+            background: var(--gray-100);
+            color: var(--primary);
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid var(--gray-200);
+            border-radius: 25px;
+            background: var(--white);
+            color: var(--gray-800);
+            font-size: 15px;
+            resize: none;
+            max-height: 120px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .message-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+
+        .send-button {
+            padding: 15px 20px;
+            background: var(--gradient-primary);
+            color: var(--white);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .send-button:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow);
+        }
+
+        .send-button:disabled {
+            background: var(--gray-400);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* No Chat Selected */
+        .no-chat-selected {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gray-50);
+            color: var(--gray-600);
+            text-align: center;
+            flex-direction: column;
+            gap: 25px;
+            padding: 40px;
+        }
+
+        .no-chat-icon {
+            font-size: 5em;
+            opacity: 0.3;
+        }
+
+        .no-chat-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+
+        .no-chat-description {
+            font-size: 16px;
+            max-width: 400px;
+            line-height: 1.6;
+        }
+
+        /* Contact Search */
+        .contact-search-container {
+            padding: 20px;
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .contact-search-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .contact-search-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--border-radius-sm);
+            font-size: 15px;
+        }
+
+        .contact-search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .contact-search-button {
+            padding: 12px 20px;
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .search-result {
+            margin-top: 20px;
+            padding: 20px;
+            background: var(--gray-50);
+            border-radius: var(--border-radius-sm);
+            display: none;
+        }
+
+        .search-result.found {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .search-result-user {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .search-result-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: var(--white);
+        }
+
+        /* Discover Section */
+        .discover-section {
+            padding: 20px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .online-users-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .user-card {
+            background: var(--white);
+            border-radius: var(--border-radius-sm);
+            padding: 15px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .user-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .user-card-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--gradient-success);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: bold;
+            font-size: 18px;
+            margin: 0 auto 10px;
+        }
+
+        .user-card-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--gray-800);
+        }
+
+        .user-card-phone {
+            font-size: 12px;
+            color: var(--gray-600);
+            margin-bottom: 10px;
+        }
+
+        .user-card-status {
+            font-size: 11px;
+            color: var(--success);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-success {
+            color: var(--success);
+        }
+
+        .text-muted {
+            color: var(--gray-600);
+        }
+
+        .mb-3 {
+            margin-bottom: 15px;
+        }
+
+        .mt-3 {
+            margin-top: 15px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+            }
+            
+            .chat-area {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 1000;
+            }
+            
+            .online-users-grid {
+                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Bar -->
+    <div id="loadingBar"></div>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-container">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Initializing iSightU...</div>
+    </div>
+
+    <!-- Auth Container -->
+    <div id="authContainer" class="auth-container hidden">
+        <div class="auth-box">
+            <div class="logo">
+                <i class="fas fa-comments"></i>
+                iSightU
+            </div>
+            <div class="tagline">Connect with anyone, anywhere, instantly</div>
+            
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchAuthTab('login')">Login</button>
+                <button class="auth-tab" onclick="switchAuthTab('register')">Register</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form active" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label" for="loginPhone">Phone Number</label>
+                    <input type="tel" class="auth-input" id="loginPhone" placeholder="e.g., +1234567890" required>
+                </div>
+                <button type="submit" class="auth-button">
+                    <i class="fas fa-sign-in-alt"></i> Login to iSightU
+                </button>
+                <div id="loginError" class="error-message"></div>
+            </form>
+
+            <!-- Register Form -->
+            <form id="registerForm" class="auth-form" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label class="form-label" for="registerName">Full Name</label>
+                    <input type="text" class="auth-input" id="registerName" placeholder="Your full name" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="registerPhone">Phone Number</label>
+                    <input type="tel" class="auth-input" id="registerPhone" placeholder="e.g., +1234567890" required>
+                </div>
+                <button type="submit" class="auth-button">
+                    <i class="fas fa-user-plus"></i> Create Account
+                </button>
+                <div id="registerError" class="error-message"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="appContainer" class="app-container hidden">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="user-info">
+                    <div id="userAvatar" class="profile-pic"></div>
+                    <div class="user-details">
+                        <div id="userName" class="user-name"></div>
+                        <div id="userPhone" class="user-phone"></div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="header-btn" onclick="toggleTheme()" title="Toggle Theme">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button class="header-btn" onclick="handleLogout()" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="search-box">
+                <div class="search-container">
+                    <input type="text" class="search-input" id="globalSearch" placeholder="Search messages, contacts...">
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+            </div>
+            
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="switchTab('chats')">
+                    <i class="fas fa-comments"></i> Chats
+                </button>
+                <button class="nav-tab" onclick="switchTab('contacts')">
+                    <i class="fas fa-users"></i> Contacts
+                </button>
+                <button class="nav-tab" onclick="switchTab('discover')">
+                    <i class="fas fa-compass"></i> Discover
+                </button>
+            </div>
+            
+            <div class="content-area">
+                <!-- Chats Tab -->
+                <div id="chatsTab" class="chat-list">
+                    <div class="no-chat-selected">
+                        <div class="no-chat-icon">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <div>
+                            <div class="no-chat-title">Your conversations</div>
+                            <div class="no-chat-description">
+                                Your chat history will appear here. Start a new conversation by adding contacts!
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Contacts Tab -->
+                <div id="contactsTab" class="contacts-list hidden">
+                    <div class="contact-search-container">
+                        <div class="section-title">
+                            <i class="fas fa-search"></i> Find People
+                        </div>
+                        <form class="contact-search-form" onsubmit="searchUser(event)">
+                            <input type="tel" class="contact-search-input" id="searchPhoneInput" placeholder="Enter phone number (e.g., +1234567890)" required>
+                            <button type="submit" class="contact-search-button">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </form>
+                        <div id="searchResult" class="search-result">
+                            <!-- Search results will appear here -->
+                        </div>
+                    </div>
+                    
+                    <div class="section-title" style="padding: 0 20px; margin-top: 20px;">
+                        <i class="fas fa-address-book"></i> My Contacts
+                    </div>
+                    <div id="contactsList">
+                        <div class="text-center text-muted mt-3">
+                            No contacts yet. Search for people to add them!
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Discover Tab -->
+                <div id="discoverTab" class="discover-list hidden">
+                    <div class="discover-section">
+                        <div class="section-title">
+                            <i class="fas fa-bolt"></i> Online Now
+                        </div>
+                        <div id="onlineUsers" class="online-users-grid">
+                            <!-- Online users will appear here -->
+                        </div>
+                    </div>
+                    
+                    <div class="discover-section">
+                        <div class="section-title">
+                            <i class="fas fa-user-plus"></i> Suggested Contacts
+                        </div>
+                        <div id="suggestedUsers" class="online-users-grid">
+                            <!-- Suggested users will appear here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-area">
+            <div id="noChatSelected" class="no-chat-selected">
+                <div class="no-chat-icon">
+                    <i class="fas fa-comment-dots"></i>
+                </div>
+                <div>
+                    <div class="no-chat-title">Welcome to iSightU</div>
+                    <div class="no-chat-description">
+                        Select a conversation from your chats, or discover new people to start chatting instantly. 
+                        Your messages are delivered in real-time with full encryption.
+                    </div>
+                </div>
+            </div>
+
+            <div id="activeChat" class="hidden">
+                <div class="chat-header-main">
+                    <div class="chat-contact">
+                        <div id="activeChatAvatar" class="contact-avatar-main"></div>
+                        <div class="contact-info-main">
+                            <div id="activeChatName" class="contact-name-main"></div>
+                            <div id="activeChatStatus" class="contact-status">
+                                <span class="online-dot"></span>
+                                Online
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-actions">
+                        <button class="chat-action-btn" title="Voice call">
+                            <i class="fas fa-phone"></i>
+                        </button>
+                        <button class="chat-action-btn" title="Video call">
+                            <i class="fas fa-video"></i>
+                        </button>
+                        <button class="chat-action-btn" title="Search messages">
+                            <i class="fas fa-search"></i>
+                        </button>
+                        <button class="chat-action-btn" title="More options">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="messages-container" id="messagesContainer">
+                    <div class="text-center text-muted" style="padding: 40px;">
+                        <i class="fas fa-comment-slash" style="font-size: 3em; margin-bottom: 15px; opacity: 0.5;"></i>
+                        <div>No messages yet. Start the conversation!</div>
+                    </div>
+                </div>
+
+                <div class="typing-indicator hidden" id="typingIndicator">
+                    <span id="typingUserName"></span>
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+
+                <div class="message-input-container">
+                    <form id="messageForm" class="message-input-form">
+                        <div class="input-actions">
+                            <button type="button" class="input-action-btn" title="Emoji">
+                                <i class="far fa-smile"></i>
+                            </button>
+                            <button type="button" class="input-action-btn" title="Attach file">
+                                <i class="fas fa-paperclip"></i>
+                            </button>
+                        </div>
+                        <textarea 
+                            id="messageInput" 
+                            class="message-input" 
+                            placeholder="Type a message..."
+                            rows="1"
+                            oninput="handleTyping()"
+                        ></textarea>
+                        <button type="submit" id="sendButton" class="send-button">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        // Complete iSightU implementation with contact management
+        class iSightU {
+            constructor() {
+                this.socket = null;
+                this.currentUser = null;
+                this.users = [];
+                this.contacts = [];
+                this.chats = [];
+                this.activeChat = null;
+                this.messages = new Map();
+                this.typingTimeout = null;
+                this.currentTab = 'chats';
+                
+                this.initializeApp();
+            }
+
+            initializeApp() {
+                this.simulateLoading();
+                this.setupEventListeners();
+                this.checkExistingUser();
+            }
+
+            simulateLoading() {
+                let width = 0;
+                const loadingBar = document.getElementById('loadingBar');
+                const interval = setInterval(() => {
+                    width += Math.random() * 10;
+                    if (width >= 100) {
+                        width = 100;
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            document.getElementById('loadingScreen').classList.add('hidden');
+                            document.getElementById('authContainer').classList.remove('hidden');
+                        }, 500);
+                    }
+                    loadingBar.style.width = width + '%';
+                }, 100);
+            }
+
+            setupEventListeners() {
+                // Message sending
+                document.getElementById('messageForm').addEventListener('submit', (e) => this.handleSendMessage(e));
+                document.getElementById('messageInput').addEventListener('input', (e) => this.adjustTextareaHeight(e.target));
+                
+                // Global search
+                document.getElementById('globalSearch').addEventListener('input', (e) => this.handleGlobalSearch(e.target.value));
+            }
+
+            checkExistingUser() {
+                const savedUser = localStorage.getItem('isightu_user');
+                if (savedUser) {
+                    this.currentUser = JSON.parse(savedUser);
+                    this.initializeSocket();
+                    this.showMainApp();
+                }
+            }
+
+            async handleLogin(phone) {
+                try {
+                    showLoading('Logging in...');
+                    const response = await fetch('http://127.0.0.1:5000/api/auth/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ phone })
+                    });
+
+                    const data = await response.json();
+                    hideLoading();
+                    
+                    if (data.success) {
+                        this.currentUser = data.user;
+                        localStorage.setItem('isightu_user', JSON.stringify(this.currentUser));
+                        this.initializeSocket();
+                        this.showMainApp();
+                        return true;
+                    } else {
+                        throw new Error(data.error);
+                    }
+                } catch (error) {
+                    hideLoading();
+                    console.error('Login error:', error);
+                    return false;
+                }
+            }
+
+            async handleRegister(name, phone) {
+                try {
+                    showLoading('Creating account...');
+                    const response = await fetch('http://127.0.0.1:5000/api/auth/register', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ name, phone })
+                    });
+
+                    const data = await response.json();
+                    hideLoading();
+                    
+                    if (data.success) {
+                        this.currentUser = data.user;
+                        localStorage.setItem('isightu_user', JSON.stringify(this.currentUser));
+                        this.initializeSocket();
+                        this.showMainApp();
+                        return true;
+                    } else {
+                        throw new Error(data.error);
+                    }
+                } catch (error) {
+                    hideLoading();
+                    console.error('Registration error:', error);
+                    return false;
+                }
+            }
+
+            initializeSocket() {
+                console.log('🔌 Connecting to iSightU server...');
+                this.socket = io('http://127.0.0.1:5000', {
+                    transports: ['websocket', 'polling']
+                });
+
+                this.socket.on('connect', () => {
+                    console.log('✅ Connected to iSightU server');
+                    this.socket.emit('user_online', { phone: this.currentUser.phone });
+                    this.loadInitialData();
+                });
+
+                this.socket.on('connect_error', (error) => {
+                    console.error('❌ Connection failed:', error);
+                    this.showError('Failed to connect to server. Please refresh the page.');
+                });
+
+                this.socket.on('new_message', (message) => {
+                    console.log('📨 New message:', message);
+                    this.handleNewMessage(message);
+                });
+
+                this.socket.on('chat_created', (chat) => {
+                    console.log('💬 Chat created:', chat);
+                    this.handleNewChat(chat);
+                });
+
+                this.socket.on('user_status_changed', (data) => {
+                    this.handleUserStatusChange(data);
+                });
+
+                this.socket.on('user_typing', (data) => {
+                    this.handleTypingIndicator(data);
+                });
+            }
+
+            async loadInitialData() {
+                await this.fetchUsers();
+                await this.fetchContacts();
+                await this.fetchChats();
+                this.updateUI();
+            }
+
+            async fetchUsers() {
+                try {
+                    const response = await fetch('http://127.0.0.1:5000/api/users');
+                    if (response.ok) {
+                        this.users = await response.json();
+                    } else {
+                        throw new Error('Failed to fetch users');
+                    }
+                } catch (error) {
+                    console.error('Error fetching users:', error);
+                }
+            }
+
+            async fetchContacts() {
+                if (!this.currentUser) return;
+                
+                try {
+                    const response = await fetch(`http://127.0.0.1:5000/api/contacts?user_phone=${this.currentUser.phone}`);
+                    if (response.ok) {
+                        this.contacts = await response.json();
+                    } else {
+                        throw new Error('Failed to fetch contacts');
+                    }
+                } catch (error) {
+                    console.error('Error fetching contacts:', error);
+                    this.contacts = [];
+                }
+            }
+
+            async fetchChats() {
+                if (!this.currentUser) return;
+                
+                try {
+                    const response = await fetch(`http://127.0.0.1:5000/api/chats?user_phone=${this.currentUser.phone}`);
+                    if (response.ok) {
+                        this.chats = await response.json();
+                    } else {
+                        throw new Error('Failed to fetch chats');
+                    }
+                } catch (error) {
+                    console.error('Error fetching chats:', error);
+                    this.chats = [];
+                }
+            }
+
+            showMainApp() {
+                document.getElementById('authContainer').classList.add('hidden');
+                document.getElementById('appContainer').classList.remove('hidden');
+                
+                // Update user info
+                document.getElementById('userName').textContent = this.currentUser.name;
+                document.getElementById('userPhone').textContent = this.currentUser.phone;
+                document.getElementById('userAvatar').textContent = this.getInitials(this.currentUser.name);
+            }
+
+            getInitials(name) {
+                return name.split(' ').map(n => n[0]).join('').toUpperCase();
+            }
+
+            updateUI() {
+                this.renderChats();
+                this.renderContacts();
+                this.renderDiscover();
+            }
+
+            renderChats() {
+                const chatsTab = document.getElementById('chatsTab');
+                
+                if (this.chats.length === 0) {
+                    chatsTab.innerHTML = `
+                        <div class="no-chat-selected">
+                            <div class="no-chat-icon">
+                                <i class="fas fa-comments"></i>
+                            </div>
+                            <div>
+                                <div class="no-chat-title">No conversations yet</div>
+                                <div class="no-chat-description">
+                                    Start chatting by adding contacts from the Discover tab!
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                chatsTab.innerHTML = '';
+                this.chats.forEach(chat => {
+                    const chatElement = document.createElement('div');
+                    chatElement.className = `chat-item ${this.activeChat?.id === chat.id ? 'active' : ''}`;
+                    
+                    const lastMessage = chat.last_message;
+                    const time = lastMessage ? new Date(lastMessage.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+                    const otherUser = chat.other_user;
+                    
+                    chatElement.innerHTML = `
+                        <div class="chat-avatar">${this.getInitials(chat.name)}</div>
+                        <div class="chat-info">
+                            <div class="chat-header">
+                                <div class="chat-name">${chat.name}</div>
+                                ${time ? `<div class="chat-time">${time}</div>` : ''}
+                            </div>
+                            <div class="last-message">
+                                ${lastMessage ? `${lastMessage.sender_name}: ${lastMessage.content}` : 'No messages yet'}
+                            </div>
+                        </div>
+                        ${otherUser && otherUser.is_online ? '<div class="online-status"></div>' : ''}
+                    `;
+                    chatElement.addEventListener('click', () => this.selectChat(chat));
+                    chatsTab.appendChild(chatElement);
+                });
+            }
+
+            renderContacts() {
+                const contactsList = document.getElementById('contactsList');
+                
+                if (this.contacts.length === 0) {
+                    contactsList.innerHTML = '<div class="text-center text-muted mt-3">No contacts yet. Search for people to add them!</div>';
+                    return;
+                }
+
+                contactsList.innerHTML = '';
+                this.contacts.forEach(contact => {
+                    const contactElement = document.createElement('div');
+                    contactElement.className = 'contact-item';
+                    contactElement.innerHTML = `
+                        <div class="contact-avatar">${this.getInitials(contact.name)}</div>
+                        <div class="contact-info">
+                            <div class="contact-header">
+                                <div class="contact-name">${contact.name}</div>
+                            </div>
+                            <div class="last-message">${contact.phone}</div>
+                        </div>
+                        ${contact.is_online ? '<div class="online-status"></div>' : ''}
+                        <button class="btn btn-outline" onclick="app.startChatWithContact('${contact.phone}')" style="margin-left: auto;">
+                            <i class="fas fa-comment"></i> Chat
+                        </button>
+                    `;
+                    contactsList.appendChild(contactElement);
+                });
+            }
+
+            renderDiscover() {
+                this.renderOnlineUsers();
+                this.renderSuggestedUsers();
+            }
+
+            renderOnlineUsers() {
+                const onlineUsersContainer = document.getElementById('onlineUsers');
+                const onlineUsers = this.users.filter(user => 
+                    user.is_online && 
+                    user.phone !== this.currentUser.phone &&
+                    !this.contacts.some(contact => contact.phone === user.phone)
+                );
+                
+                if (onlineUsers.length === 0) {
+                    onlineUsersContainer.innerHTML = '<div class="text-center text-muted">No online users available</div>';
+                    return;
+                }
+
+                onlineUsersContainer.innerHTML = '';
+                onlineUsers.forEach(user => {
+                    const userCard = document.createElement('div');
+                    userCard.className = 'user-card';
+                    userCard.innerHTML = `
+                        <div class="user-card-avatar">${this.getInitials(user.name)}</div>
+                        <div class="user-card-name">${user.name}</div>
+                        <div class="user-card-phone">${user.phone}</div>
+                        <div class="user-card-status">
+                            <div class="online-dot"></div> Online
+                        </div>
+                        <button class="btn btn-primary mt-3" onclick="app.addContact('${user.phone}')" style="width: 100%;">
+                            <i class="fas fa-user-plus"></i> Add
+                        </button>
+                    `;
+                    onlineUsersContainer.appendChild(userCard);
+                });
+            }
+
+            renderSuggestedUsers() {
+                const suggestedUsersContainer = document.getElementById('suggestedUsers');
+                const suggestedUsers = this.users.filter(user => 
+                    user.phone !== this.currentUser.phone &&
+                    !this.contacts.some(contact => contact.phone === user.phone)
+                ).slice(0, 6); // Limit to 6 suggestions
+                
+                if (suggestedUsers.length === 0) {
+                    suggestedUsersContainer.innerHTML = '<div class="text-center text-muted">No suggestions available</div>';
+                    return;
+                }
+
+                suggestedUsersContainer.innerHTML = '';
+                suggestedUsers.forEach(user => {
+                    const userCard = document.createElement('div');
+                    userCard.className = 'user-card';
+                    userCard.innerHTML = `
+                        <div class="user-card-avatar">${this.getInitials(user.name)}</div>
+                        <div class="user-card-name">${user.name}</div>
+                        <div class="user-card-phone">${user.phone}</div>
+                        <div class="user-card-status">
+                            ${user.is_online ? '<div class="online-dot"></div> Online' : 'Offline'}
+                        </div>
+                        <button class="btn btn-primary mt-3" onclick="app.addContact('${user.phone}')" style="width: 100%;">
+                            <i class="fas fa-user-plus"></i> Add
+                        </button>
+                    `;
+                    suggestedUsersContainer.appendChild(userCard);
+                });
+            }
+
+            async searchUser(phone) {
+                try {
+                    showLoading('Searching...');
+                    const response = await fetch(`http://127.0.0.1:5000/api/users/search/${phone}?current_user=${this.currentUser.phone}`);
+                    const data = await response.json();
+                    hideLoading();
+                    
+                    const searchResult = document.getElementById('searchResult');
+                    
+                    if (data.found) {
+                        searchResult.innerHTML = `
+                            <div class="search-result-user">
+                                <div class="contact-avatar">${this.getInitials(data.user.name)}</div>
+                                <div>
+                                    <div class="contact-name">${data.user.name}</div>
+                                    <div class="text-muted">${data.user.phone}</div>
+                                    <div class="text-success">
+                                        <i class="fas fa-circle"></i> ${data.user.is_online ? 'Online' : 'Offline'}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="search-result-actions">
+                                ${data.is_contact ? 
+                                    `<button class="btn btn-outline" onclick="app.startChatWithContact('${data.user.phone}')">
+                                        <i class="fas fa-comment"></i> Message
+                                    </button>
+                                    <button class="btn btn-outline" onclick="app.removeContact('${data.user.phone}')">
+                                        <i class="fas fa-user-minus"></i> Remove
+                                    </button>` :
+                                    `<button class="btn btn-primary" onclick="app.addContact('${data.user.phone}')">
+                                        <i class="fas fa-user-plus"></i> Add Contact
+                                    </button>
+                                    <button class="btn btn-outline" onclick="app.startChat('${data.user.phone}')">
+                                        <i class="fas fa-comment"></i> Chat Anyway
+                                    </button>`
+                                }
+                            </div>
+                        `;
+                        searchResult.classList.add('found');
+                    } else {
+                        searchResult.innerHTML = `
+                            <div class="text-center text-muted">
+                                <i class="fas fa-user-slash" style="font-size: 2em; margin-bottom: 10px;"></i>
+                                <div>User not found on iSightU</div>
+                                <div class="mt-3">
+                                    <button class="btn btn-outline" onclick="app.inviteUser('${phone}')">
+                                        <i class="fas fa-share"></i> Invite to iSightU
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        searchResult.classList.add('found');
+                    }
+                } catch (error) {
+                    hideLoading();
+                    console.error('Search error:', error);
+                    this.showError('Failed to search user');
+                }
+            }
+
+            async addContact(contactPhone) {
+                try {
+                    showLoading('Adding contact...');
+                    const response = await fetch('http://127.0.0.1:5000/api/contacts/add', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            user_phone: this.currentUser.phone,
+                            contact_phone: contactPhone
+                        })
+                    });
+
+                    const data = await response.json();
+                    hideLoading();
+                    
+                    if (data.success) {
+                        this.showSuccess('Contact added successfully!');
+                        await this.fetchContacts();
+                        this.updateUI();
+                    } else {
+                        throw new Error(data.error);
+                    }
+                } catch (error) {
+                    hideLoading();
+                    console.error('Add contact error:', error);
+                    this.showError('Failed to add contact');
+                }
+            }
+
+            async removeContact(contactPhone) {
+                try {
+                    showLoading('Removing contact...');
+                    const response = await fetch('http://127.0.0.1:5000/api/contacts/remove', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            user_phone: this.currentUser.phone,
+                            contact_phone: contactPhone
+                        })
+                    });
+
+                    const data = await response.json();
+                    hideLoading();
+                    
+                    if (data.success) {
+                        this.showSuccess('Contact removed successfully!');
+                        await this.fetchContacts();
+                        this.updateUI();
+                    } else {
+                        throw new Error(data.error);
+                    }
+                } catch (error) {
+                    hideLoading();
+                    console.error('Remove contact error:', error);
+                    this.showError('Failed to remove contact');
+                }
+            }
+
+            startChatWithContact(contactPhone) {
+                const contact = this.users.find(user => user.phone === contactPhone);
+                if (contact) {
+                    this.startChat(contact);
+                    this.switchTab('chats');
+                }
+            }
+
+            startChat(user) {
+                const existingChat = this.chats.find(chat => 
+                    chat.participants.includes(user.phone) && chat.participants.includes(this.currentUser.phone)
+                );
+
+                if (existingChat) {
+                    this.selectChat(existingChat);
+                } else {
+                    this.socket.emit('create_chat', {
+                        participants: [this.currentUser.phone, user.phone],
+                        name: user.name
+                    });
+                }
+            }
+
+            selectChat(chat) {
+                this.activeChat = chat;
+                
+                // Update UI
+                document.getElementById('noChatSelected').classList.add('hidden');
+                document.getElementById('activeChat').classList.remove('hidden');
+                
+                document.getElementById('activeChatName').textContent = chat.name;
+                document.getElementById('activeChatAvatar').textContent = this.getInitials(chat.name);
+                
+                // Update status
+                const otherUser = this.users.find(u => u.phone === chat.participants.find(p => p !== this.currentUser.phone));
+                const statusElement = document.getElementById('activeChatStatus');
+                if (otherUser && otherUser.is_online) {
+                    statusElement.innerHTML = '<span class="online-dot"></span>Online';
+                } else {
+                    statusElement.innerHTML = 'Offline';
+                }
+                
+                this.loadChatMessages(chat.id);
+                this.renderChats(); // Re-render to update active state
+                
+                // Join chat room
+                this.socket.emit('join_chat', {
+                    user_phone: this.currentUser.phone,
+                    chat_id: chat.id
+                });
+            }
+
+            async loadChatMessages(chatId) {
+                try {
+                    const response = await fetch(`http://127.0.0.1:5000/api/chats/${chatId}/messages`);
+                    const messages = await response.json();
+                    this.messages.set(chatId, messages);
+                    this.renderMessages(messages);
+                } catch (error) {
+                    console.error('Error loading messages:', error);
+                    this.messages.set(chatId, []);
+                    this.renderMessages([]);
+                }
+            }
+
+            renderMessages(messages) {
+                const messagesContainer = document.getElementById('messagesContainer');
+                messagesContainer.innerHTML = '';
+
+                if (messages.length === 0) {
+                    messagesContainer.innerHTML = `
+                        <div class="text-center text-muted" style="padding: 40px;">
+                            <i class="fas fa-comment-slash" style="font-size: 3em; margin-bottom: 15px; opacity: 0.5;"></i>
+                            <div>No messages yet. Start the conversation!</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                messages.forEach(message => {
+                    const messageElement = document.createElement('div');
+                    const isSent = message.sender_phone === this.currentUser.phone;
+                    messageElement.className = `message ${isSent ? 'sent' : 'received'}`;
+                    
+                    messageElement.innerHTML = `
+                        <div class="message-content">
+                            ${!isSent ? `<div class="message-sender">${message.sender_name}</div>` : ''}
+                            <div>${message.content}</div>
+                            <div class="message-time">
+                                ${new Date(message.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </div>
+                        </div>
+                    `;
+                    messagesContainer.appendChild(messageElement);
+                });
+
+                this.scrollToBottom();
+            }
+
+            handleNewMessage(message) {
+                if (message.chat_id === this.activeChat?.id) {
+                    const currentMessages = this.messages.get(message.chat_id) || [];
+                    currentMessages.push(message);
+                    this.messages.set(message.chat_id, currentMessages);
+                    this.renderMessages(currentMessages);
+                }
+
+                // Update chat list
+                this.updateChatLastMessage(message.chat_id, message);
+            }
+
+            updateChatLastMessage(chatId, message) {
+                const chat = this.chats.find(c => c.id === chatId);
+                if (chat) {
+                    chat.last_message = message;
+                    this.renderChats();
+                }
+            }
+
+            handleNewChat(chat) {
+                if (!this.chats.find(c => c.id === chat.id)) {
+                    this.chats.push(chat);
+                    this.renderChats();
+                }
+            }
+
+            handleUserStatusChange(data) {
+                const user = this.users.find(u => u.phone === data.phone);
+                if (user) {
+                    user.is_online = data.is_online;
+                    user.last_seen = data.last_seen;
+                    this.updateUI();
+                    
+                    // Update active chat status if needed
+                    if (this.activeChat && this.activeChat.participants.includes(data.phone)) {
+                        const statusElement = document.getElementById('activeChatStatus');
+                        if (data.is_online) {
+                            statusElement.innerHTML = '<span class="online-dot"></span>Online';
+                        } else {
+                            statusElement.innerHTML = `Last seen ${new Date(data.last_seen).toLocaleTimeString()}`;
+                        }
+                    }
+                }
+            }
+
+            handleTypingIndicator(data) {
+                const typingIndicator = document.getElementById('typingIndicator');
+                const typingUserName = document.getElementById('typingUserName');
+                
+                if (data.is_typing && data.chat_id === this.activeChat?.id && data.user_phone !== this.currentUser.phone) {
+                    typingUserName.textContent = data.user_name;
+                    typingIndicator.classList.remove('hidden');
+                } else {
+                    typingIndicator.classList.add('hidden');
+                }
+            }
+
+            handleSendMessage(e) {
+                e.preventDefault();
+                
+                const messageInput = document.getElementById('messageInput');
+                const content = messageInput.value.trim();
+                
+                if (!content || !this.activeChat) return;
+
+                const messageData = {
+                    chat_id: this.activeChat.id,
+                    sender_phone: this.currentUser.phone,
+                    content: content
+                };
+
+                this.socket.emit('send_message', messageData);
+                messageInput.value = '';
+                this.adjustTextareaHeight(messageInput);
+                
+                // Stop typing indicator
+                this.socket.emit('typing_stop', {
+                    chat_id: this.activeChat.id,
+                    user_phone: this.currentUser.phone
+                });
+            }
+
+            handleTyping() {
+                if (!this.activeChat) return;
+                
+                // Clear existing timeout
+                if (this.typingTimeout) {
+                    clearTimeout(this.typingTimeout);
+                }
+                
+                // Start typing
+                this.socket.emit('typing_start', {
+                    chat_id: this.activeChat.id,
+                    user_phone: this.currentUser.phone
+                });
+                
+                // Stop typing after 2 seconds of inactivity
+                this.typingTimeout = setTimeout(() => {
+                    this.socket.emit('typing_stop', {
+                        chat_id: this.activeChat.id,
+                        user_phone: this.currentUser.phone
+                    });
+                }, 2000);
+                
+                this.adjustTextareaHeight(document.getElementById('messageInput'));
+            }
+
+            adjustTextareaHeight(textarea) {
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+            }
+
+            scrollToBottom() {
+                const messagesContainer = document.getElementById('messagesContainer');
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            switchTab(tabName) {
+                this.currentTab = tabName;
+                
+                // Update tab buttons
+                document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+                document.querySelector(`.nav-tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
+                
+                // Update content areas
+                document.getElementById('chatsTab').classList.add('hidden');
+                document.getElementById('contactsTab').classList.add('hidden');
+                document.getElementById('discoverTab').classList.add('hidden');
+                document.getElementById(tabName + 'Tab').classList.remove('hidden');
+            }
+
+            handleGlobalSearch(query) {
+                // Implement global search functionality
+                console.log('Searching for:', query);
+                // This would search through messages, contacts, and chats
+            }
+
+            inviteUser(phone) {
+                this.showSuccess(`Invitation sent to ${phone}!`);
+                // In a real app, this would send an SMS or email invitation
+            }
+
+            showError(message) {
+                this.showNotification(message, 'error');
+            }
+
+            showSuccess(message) {
+                this.showNotification(message, 'success');
+            }
+
+            showNotification(message, type = 'info') {
+                // Create a simple toast notification
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 15px 20px;
+                    background: ${type === 'error' ? 'var(--danger)' : type === 'success' ? 'var(--success)' : 'var(--primary)'};
+                    color: white;
+                    border-radius: var(--border-radius-sm);
+                    box-shadow: var(--shadow-lg);
+                    z-index: 10000;
+                    animation: slideIn 0.3s ease;
+                `;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+            }
+
+            handleLogout() {
+                if (this.socket) {
+                    this.socket.emit('user_offline', { phone: this.currentUser.phone });
+                    this.socket.disconnect();
+                }
+                localStorage.removeItem('isightu_user');
+                location.reload();
+            }
+        }
+
+        // Global functions
+        function switchAuthTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+            
+            document.querySelector(`.auth-tab[onclick="switchAuthTab('${tab}')"]`).classList.add('active');
+            document.getElementById(tab + 'Form').classList.add('active');
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const phone = document.getElementById('loginPhone').value.trim();
+            const errorDiv = document.getElementById('loginError');
+            
+            if (!phone) {
+                errorDiv.textContent = 'Please enter your phone number';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            const success = await app.handleLogin(phone);
+            
+            if (!success) {
+                errorDiv.textContent = 'Login failed. Please check your phone number or register first.';
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        async function handleRegister(event) {
+            event.preventDefault();
+            const name = document.getElementById('registerName').value.trim();
+            const phone = document.getElementById('registerPhone').value.trim();
+            const errorDiv = document.getElementById('registerError');
+            
+            if (!name || !phone) {
+                errorDiv.textContent = 'Please fill in all fields';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            const success = await app.handleRegister(name, phone);
+            
+            if (!success) {
+                errorDiv.textContent = 'Registration failed. Phone number might be already registered.';
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function switchTab(tabName) {
+            if (app) {
+                app.switchTab(tabName);
+            }
+        }
+
+        function searchUser(event) {
+            event.preventDefault();
+            const phone = document.getElementById('searchPhoneInput').value.trim();
+            if (phone && app) {
+                app.searchUser(phone);
+            }
+        }
+
+        function handleTyping() {
+            if (app) {
+                app.handleTyping();
+            }
+        }
+
+        function handleLogout() {
+            if (app) {
+                app.handleLogout();
+            }
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-theme');
+            // In a real app, you would implement a proper dark theme
+        }
+
+        // Loading utility functions
+        function showLoading(message = 'Loading...') {
+            // Implement a loading spinner if needed
+            console.log(message);
+        }
+
+        function hideLoading() {
+            // Hide loading spinner
+        }
+
+        // Initialize the app when the page loads
+        let app;
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new iSightU();
+            window.app = app; // Make app globally available for onclick handlers
+        });
+
+        // Add CSS for slideIn animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
