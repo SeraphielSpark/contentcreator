@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SearchQuery Studio - Advanced Text Processing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        /* CSS Variables - Color Palette */
+        :root {
+            /* Primary Colors */
+            --primary-main: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --primary-contrast: #ffffff;
+            
+            /* Secondary Colors */
+            --secondary-main: #a855f7;
+            --secondary-light: #c084fc;
+            --secondary-dark: #9333ea;
+            --secondary-contrast: #ffffff;
+            
+            /* Background Colors */
+            --bg-dark: #0f172a;
+            --bg-darker: #1e1b4b;
+            --bg-card: #1e293b;
+            --bg-card-light: #334155;
+            --bg-input: rgba(15, 23, 42, 0.5);
+            
+            /* Text Colors */
+            --text-primary: #ffffff;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --text-light: #cbd5e1;
+            --text-accent: #e0e7ff;
+            
+            /* Status Colors */
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #3b82f6;
+            
+            /* Code Colors */
+            --code-purple: #c084fc;
+            --code-blue: #818cf8;
+            --code-green: #34d399;
+            --code-yellow: #fbbf24;
+            --code-gray: #64748b;
+            
+            /* Border Colors */
+            --border-primary: rgba(99, 102, 241, 0.2);
+            --border-secondary: rgba(168, 85, 247, 0.2);
+            --border-info: rgba(59, 130, 246, 0.2);
+            
+            /* Shadow Colors */
+            --shadow-primary: rgba(99, 102, 241, 0.4);
+            --shadow-secondary: rgba(168, 85, 247, 0.4);
+            --shadow-blue: rgba(59, 130, 246, 0.4);
+            --shadow-green: rgba(16, 185, 129, 0.4);
+            --shadow-dark: rgba(0, 0, 0, 0.5);
+            
+            /* Gradient Colors */
+            --gradient-primary: linear-gradient(135deg, #6366f1, #a855f7);
+            --gradient-primary-light: linear-gradient(135deg, #6366f1, #8b5cf6);
+            --gradient-secondary: linear-gradient(135deg, #a855f7, #ec4899);
+            --gradient-blue: linear-gradient(135deg, #3b82f6, #06b6d4);
+            --gradient-green: linear-gradient(135deg, #10b981, #14b8a6);
+            --gradient-dark: linear-gradient(135deg, #1e293b, #334155);
+            --gradient-hero: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
+            --gradient-appbar: linear-gradient(to right, #1e1b4b, #312e81);
+            
+            /* Typography */
+            --font-family: 'Inter', sans-serif;
+            --font-family-mono: monospace;
+            
+            /* Border Radius */
+            --border-radius-sm: 8px;
+            --border-radius-md: 12px;
+            --border-radius-lg: 16px;
+            --border-radius-xl: 50%;
+            
+            /* Spacing */
+            --spacing-xs: 8px;
+            --spacing-sm: 12px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            --spacing-2xl: 40px;
+            --spacing-3xl: 48px;
+            --spacing-4xl: 64px;
+            --spacing-5xl: 120px;
+        }
+
+        /* Global Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* Utility Classes */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-md);
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .d-flex {
+            display: flex;
+        }
+
+        .align-center {
+            align-items: center;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .gap-sm {
+            gap: var(--spacing-sm);
+        }
+
+        .gap-md {
+            gap: var(--spacing-md);
+        }
+
+        .gap-lg {
+            gap: var(--spacing-lg);
+        }
+
+        .gap-xl {
+            gap: var(--spacing-xl);
+        }
+
+        .w-100 {
+            width: 100%;
+        }
+
+        .h-100 {
+            height: 100%;
+        }
+
+        /* Typography */
+        .h1, .h2, .h3, .h4, .h5, .h6 {
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .h1 { font-size: 56px; }
+        .h2 { font-size: 48px; }
+        .h3 { font-size: 40px; }
+        .h4 { font-size: 32px; }
+        .h5 { font-size: 24px; }
+        .h6 { font-size: 20px; }
+
+        .body1 {
+            font-size: 16px;
+            color: var(--text-light);
+            line-height: 1.7;
+        }
+
+        .body2 {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .code {
+            font-family: var(--font-family-mono);
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        /* App Bar */
+        .app-bar {
+            position: sticky;
+            top: 0;
+            background: var(--gradient-appbar);
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+            z-index: 1000;
+        }
+
+        .app-bar-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+        }
+
+        .logo {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--border-radius-sm);
+            background: var(--gradient-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-link {
+            color: var(--text-accent);
+            font-weight: 500;
+            font-size: 15px;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--text-primary);
+        }
+
+        .nav-link.active {
+            color: var(--text-primary);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: var(--gradient-hero);
+            padding: var(--spacing-5xl) 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chip {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--primary-light);
+            border: 1px solid var(--border-primary);
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 14px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            text-transform: none;
+            border: none;
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+        }
+
+        .btn-contained {
+            background: var(--gradient-primary);
+            color: var(--primary-contrast);
+            box-shadow: 0 8px 24px var(--shadow-primary);
+        }
+
+        .btn-contained:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px var(--shadow-primary);
+        }
+
+        .btn-outlined {
+            background: transparent;
+            color: var(--primary-light);
+            border: 2px solid var(--primary-main);
+        }
+
+        .btn-outlined:hover {
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .btn-large {
+            padding: 16px 32px;
+            font-size: 16px;
+        }
+
+        .btn-full {
+            width: 100%;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--gradient-dark);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            height: 100%;
+            transition: transform 0.3s ease;
+            box-shadow: 0 10px 40px var(--shadow-dark);
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+        }
+
+        .card-highlight {
+            background: var(--gradient-primary-light);
+            border: 2px solid var(--secondary-main);
+            position: relative;
+        }
+
+        .icon-container {
+            width: 64px;
+            height: 64px;
+            border-radius: var(--border-radius-md);
+            background: var(--gradient-primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .icon-container-secondary {
+            background: var(--gradient-secondary);
+        }
+
+        .icon-container-blue {
+            background: var(--gradient-blue);
+        }
+
+        /* Code Display */
+        .code-block {
+            background: #0f172a;
+            padding: 20px;
+            border-radius: var(--border-radius-sm);
+            border: 1px solid var(--border-primary);
+            overflow-x: auto;
+        }
+
+        .code-purple { color: var(--code-purple); }
+        .code-blue { color: var(--code-blue); }
+        .code-green { color: var(--code-green); }
+        .code-yellow { color: var(--code-yellow); }
+        .code-gray { color: var(--code-gray); }
+        .code-white { color: var(--text-primary); }
+
+        /* Process Steps */
+        .step-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: var(--border-radius-xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto var(--spacing-lg);
+            box-shadow: 0 8px 32px var(--shadow-primary);
+        }
+
+        .step-circle-1 { background: var(--gradient-primary-light); }
+        .step-circle-2 { background: var(--gradient-secondary); }
+        .step-circle-3 { background: var(--gradient-blue); }
+        .step-circle-4 { background: var(--gradient-green); }
+
+        /* Pricing */
+        .pricing-chip {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: var(--primary-contrast);
+            color: var(--primary-main);
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .form-input {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--border-radius-sm);
+            padding: 12px 16px;
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            font-size: 16px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-main);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--gradient-appbar);
+            padding: var(--spacing-4xl) 0;
+            border-top: 1px solid var(--border-primary);
+        }
+
+        .social-icon {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--primary-light);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: var(--border-radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .social-icon:hover {
+            background: rgba(99, 102, 241, 0.3);
+        }
+
+        /* Grid System */
+        .grid {
+            display: grid;
+            gap: var(--spacing-lg);
+        }
+
+        .grid-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+        /* Section spacing */
+        .section-dark {
+            background-color: var(--bg-dark);
+            padding: var(--spacing-5xl) 0;
+        }
+
+        .section-gradient {
+            background: var(--gradient-hero);
+            padding: var(--spacing-5xl) 0;
+        }
+
+        /* Feature highlights */
+        .feature-highlight {
+            background: rgba(99, 102, 241, 0.1);
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius-sm);
+            border: 1px solid var(--border-primary);
+        }
+
+        .feature-highlight-secondary {
+            background: rgba(168, 85, 247, 0.1);
+            border-color: var(--border-secondary);
+        }
+
+        .feature-highlight-blue {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: var(--border-info);
+        }
+
+        /* Chip variants */
+        .chip-small {
+            background: rgba(168, 85, 247, 0.3);
+            color: var(--secondary-light);
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            display: inline-block;
+        }
+
+        /* Dot indicators */
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .dot.red { background-color: var(--error); }
+        .dot.yellow { background-color: var(--warning); }
+        .dot.green { background-color: var(--success); }
+
+        /* Divider */
+        .divider {
+            border: none;
+            border-top: 1px solid var(--border-primary);
+            margin: var(--spacing-xl) 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 var(--spacing-sm);
+            }
+            
+            .h1 { font-size: 40px; }
+            .h2 { font-size: 32px; }
+            .h3 { font-size: 28px; }
+            
+            .grid-2,
+            .grid-3,
+            .grid-4 {
+                grid-template-columns: 1fr;
+            }
+            
+            .app-bar-toolbar {
+                flex-direction: column;
+                gap: var(--spacing-md);
+            }
+            
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- App Bar -->
+    <header class="app-bar">
+        <div class="container">
+            <div class="app-bar-toolbar">
+                <div class="d-flex align-center gap-sm">
+                    <div class="logo">
+                        <span class="material-icons">search</span>
+                    </div>
+                    <h6 class="h6">SearchQuery Studio</h6>
+                </div>
+                <nav class="d-flex gap-xl align-center nav-links">
+                    <a href="#home" class="nav-link active">Home</a>
+                    <a href="#products" class="nav-link">Products</a>
+                    <a href="#documentation" class="nav-link">Documentation</a>
+                    <a href="#pricing" class="nav-link">Pricing</a>
+                    <a href="#contact" class="nav-link">Contact</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="container">
+            <div class="grid grid-2 align-center">
+                <div>
+                    <span class="chip">Natural Language Processing</span>
+                    <h1 class="h1">Advanced Query Processing Solutions</h1>
+                    <p class="body1">
+                        Transform your text data with our cutting-edge NLP technology.
+                        Handle linting messages, tokenize text with precision, and
+                        translate seamlessly using the powerful PyDiode Python framework.
+                    </p>
+                    <div class="d-flex gap-md">
+                        <button class="btn btn-contained">Try Free Demo</button>
+                        <button class="btn btn-outlined">Documentation</button>
+                    </div>
+                </div>
+                <div>
+                    <div class="card">
+                        <div class="d-flex gap-sm">
+                            <div class="dot red"></div>
+                            <div class="dot yellow"></div>
+                            <div class="dot green"></div>
+                        </div>
+                        <pre class="code">
+<span class="code-purple">from</span> <span class="code-blue">search_query</span> <span class="code-purple">import</span> <span class="code-white">SearchFile</span>
+<span class="code-gray"># Initialize processor</span>
+<span class="code-white">search_file </span> <span class="code-purple">=</span> <span class="code-yellow">(</span>
+<div style="margin-top: 0px;">
+    <span class="code-white">filepath</span> <span class="code-purple">=</span> <span class="code-white">"search-file.json"</span><span class="code-yellow">,</span>
+    <span class="code-white">search_string</span> <span class="code-purple">=</span> <span class="code-white">wos_query.to_string()</span><span class="code-yellow">,</span>
+    <span class="code-white">platform</span> <span class="code-purple">=</span> <span class="code-white">"wos"</span><span class="code-yellow">,</span>
+    <span class="code-white">version</span> <span class="code-purple">=</span> <span class="code-white">"1"</span><span class="code-yellow">,</span>
+    <span class="code-white">authors</span> <span class="code-purple">=</span> <span class="code-white">[{"name": "Tom Brady"}]</span><span class="code-yellow">,</span>
+    <span class="code-white"> record_info</span> <span class="code-purple">=</span> <span class="code-white">{}</span><span class="code-yellow">,</span>
+    <span class="code-white">date</span> <span class="code-purple">=</span> <span class="code-white">{}</span><span class="code-yellow">,</span>
+</div>
+<span class="code-yellow">)</span>
+<span class="code-purple">search_file.save()</span>
+                        </pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Products Section -->
+    <section id="products" class="section-dark">
+        <div class="container">
+            <div class="text-center">
+                <h3 class="h3">Powerful Features</h3>
+                <p class="body2">Everything you need to process and analyze text data</p>
+            </div>
+            <div class="grid grid-3">
+                <div class="card">
+                    <div class="icon-container">
+                        <span class="material-icons">check_circle</span>
+                    </div>
+                    <h5 class="h5">Linter Message</h5>
+                    <p class="body1">
+                        Automatically identify and correct text errors with our
+                        advanced linting engine. Get real-time feedback on grammar,
+                        syntax, and style issues.
+                    </p>
+                    <div class="feature-highlight">
+                        <p class="code">
+                            <span>Error: Line 3, Column 12</span><br>
+                            <span>Expected semicolon</span><br>
+                            <span>Suggestion: Add ';' at end</span>
+                        </p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="icon-container icon-container-secondary">
+                        <span class="material-icons">token</span>
+                    </div>
+                    <h5 class="h5">Tokenize Message</h5>
+                    <p class="body1">
+                        Break down complex text into meaningful tokens with precision.
+                        Our tokenizer handles multiple languages and special
+                        characters seamlessly.
+                    </p>
+                    <div class="feature-highlight-secondary">
+                        <div class="d-flex gap-sm">
+                            <span class="chip-small">Hello</span>
+                            <span class="chip-small">World</span>
+                            <span class="chip-small">!</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="icon-container icon-container-blue">
+                        <span class="material-icons">translate</span>
+                    </div>
+                    <h5 class="h5">Search-Query Translator</h5>
+                    <p class="body1">
+                        Translate a database/search-platform query into another platform using the search-query package.
+                    </p>
+                    <div class="feature-highlight-blue">
+                        <p class="code">
+                            <span>(platform*[ti] OR "digital work"[ti]) AND 2020-2025[dp]</span><br>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="section-gradient">
+        <div class="container">
+            <div class="text-center">
+                <h3 class="h3">How It Works</h3>
+                <p class="body2">Simple, powerful workflow in four steps</p>
+            </div>
+            <div class="grid grid-4">
+                <div class="text-center">
+                    <div class="step-circle step-circle-1">
+                        <h4 class="h4">1</h4>
+                    </div>
+                    <h6 class="h6">Input Text</h6>
+                    <p class="body2">
+                        Submit your text data through our API or web interface for
+                        processing
+                    </p>
+                </div>
+                <div class="text-center">
+                    <div class="step-circle step-circle-2">
+                        <h4 class="h4">2</h4>
+                    </div>
+                    <h6 class="h6">Process & Lint</h6>
+                    <p class="body2">
+                        Our engine analyzes and identifies errors, inconsistencies,
+                        and improvement areas
+                    </p>
+                </div>
+                <div class="text-center">
+                    <div class="step-circle step-circle-3">
+                        <h4 class="h4">3</h4>
+                    </div>
+                    <h6 class="h6">Tokenize</h6>
+                    <p class="body2">
+                        Text is broken down into meaningful tokens for deeper analysis
+                        and translation
+                    </p>
+                </div>
+                <div class="text-center">
+                    <div class="step-circle step-circle-4">
+                        <h4 class="h4">4</h4>
+                    </div>
+                    <h6 class="h6">Get Results</h6>
+                    <p class="body2">
+                        Receive processed, corrected, and translated text ready for
+                        use
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Documentation Section -->
+    <section id="documentation" class="section-dark" >
+        <div class="container" >
+            <div class="text-center">
+                <h3 class="h3">Get started with Search Query</h3>
+            </div>
+            <div class="grid " style="display: grid; place-content: center; place-items: center; width: 100%; margin-top: 30px;">
+                <div class="card">
+                    <h5 class="h5">Quick Start Guide</h5>
+                    <p class="body1">
+                        Install the Search Query package and start processing text in
+                        minutes:
+                    </p>
+                    <div class="code-block">
+                        <pre class="code">
+<span class="code-gray"># Install SearchQuery</span>
+<span class="code-green">pip install search-query</span>
+<span class="code-gray"># Import and initialize</span>
+                        </pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="section-gradient">
+        <div class="container">
+            <div class="text-center">
+                <h3 class="h3">Simple, Transparent Pricing</h3>
+                <p class="body2">Choose the plan that fits your needs</p>
+            </div>
+            <div class="grid grid-3">
+                <div class="card text-center">
+                    <h5 class="h5">Free</h5>
+                    <h3 class="h3" style="color: var(--primary-main);">$0</h3>
+                    <p class="body2">per month</p>
+                    <hr class="divider">
+                    <div class="text-left">
+                        <div class="d-flex align-center gap-sm">
+                            <span class="material-icons" style="color: var(--success);">check_circle</span>
+                            <p class="body2">1,000 API calls/month</p>
+                        </div>
+                        <div class="d-flex align-center gap-sm">
+                            <span class="material-icons" style="color: var(--success);">check_circle</span>
+                            <p class="body2">Basic linting</p>
+                        </div>
+                        <div class="d-flex align-center gap-sm">
+                            <span class="material-icons" style="color: var(--success);">check_circle</span>
+                            <p class="body2">Standard tokenization</p>
+                        </div>
+                        <div class="d-flex align-center gap-sm">
+                            <span class="material-icons" style="color: var(--success);">check_circle</span>
+                            <p class="body2">5 languages</p>
+                        </div>
+                        <div class="d-flex align-center gap-sm">
+                            <span class="material-icons" style="color: var(--success);">check_circle</span>
+                            <p class="body2">Community support</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-outlined btn-full">Get Started</button>
+                </div>
+                <div class="card card-highlight text-center">
+                    <span class="pricing-chip">Most Popular</span>
+                    <h5 class="h5">Professional</h5>
+                    <h3 class="h3">$49</h3>
+                    <p class="body2">per month</p>
+                    <hr class="divider">
+                    <div class="text-left">
+                        <div class="d-flex align-center gap-sm">
+                            <span class="material-icons">check_circle</span>
+                            <p class="body2">Advanced linting</p>
+                        </div>
+                        <div class="d-flex align-center gap-sm">
+                            <span class="material-icons">check_circle</span>
+                            <p class="body2">Advanced tokenization</p>
+                        </div>
+
+                        <div class="d-flex align-center gap-sm">
+                            <span class="material-icons">check_circle</span>
+                            <p class="body2">Priority support</p>
+                        </div>
+                        <div class="d-flex align-center gap-sm">
+                            <span class="material-icons">check_circle</span>
+                            <p class="body2">Custom models</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-contained btn-full" style="background: #ffffff; color: var(--primary-main);">Start Free Trial</button>
+                </div>
+                <div class="card text-center">
+                    <h5 class="h5">Enterprise</h5>
+                    <h3 class="h3" style="color: var(--primary-main);">Custom</h3>
+                    <p class="body2">contact us</p>
+                    <hr class="divider">
+                    <div class="text-left">
+                        <div class="d-flex align-center gap-sm">
+                            <span class="material-icons" style="color: var(--success);">check_circle</span>
+                            <p class="body2">Unlimited API calls</p>
+                        </div>
+                        <div class="d-flex align-center gap-sm">
+                            <span class="material-icons" style="color: var(--success);">check_circle</span>
+                            <p class="body2">Enterprise linting</p>
+                        </div>
+                        <div class="d-flex align-center gap-sm">
+                            <span class="material-icons" style="color: var(--success);">check_circle</span>
+                            <p class="body2">Custom tokenization</p>
+                        </div>
+                        <div class="d-flex align-center gap-sm">
+                            <span class="material-icons" style="color: var(--success);">check_circle</span>
+                            <p class="body2">100+ languages</p>
+                        </div>
+                        <div class="d-flex align-center gap-sm">
+                            <span class="material-icons" style="color: var(--success);">check_circle</span>
+                            <p class="body2">24/7 dedicated support</p>
+                        </div>
+                        <div class="d-flex align-center gap-sm">
+                            <span class="material-icons" style="color: var(--success);">check_circle</span>
+                            <p class="body2">On-premise deployment</p>
+                        </div>
+                        <div class="d-flex align-center gap-sm">
+                            <span class="material-icons" style="color: var(--success);">check_circle</span>
+                            <p class="body2">SLA guarantee</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-outlined btn-full">Contact Sales</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="section-dark">
+        <div class="container">
+            <div class="text-center">
+                <h3 class="h3">Get In Touch</h3>
+                <p class="body2">Have questions? We'd love to hear from you</p>
+            </div>
+            <div class="card" style="max-width: 800px; margin: 0 auto;">
+                <form>
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <input type="text" class="form-input" placeholder="First Name">
+                        </div>
+                        <div class="form-group">
+                            <input type="text" class="form-input" placeholder="Last Name">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <input type="email" class="form-input" placeholder="Email Address">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-input" placeholder="Company">
+                    </div>
+                    <div class="form-group">
+                        <textarea class="form-input form-textarea" placeholder="Message"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-contained btn-full btn-large">Send Message</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="grid " style="grid-template-columns: 1fr 1fr">
+                <div>
+                    <div style="display: flex; flex-direction: column;">
+                        <div class="logo" style="width: 40px; height: 40px;">
+                            <span class="material-icons">search</span>
+                        </div>
+                        <h6 class="h6">SearchQuery Studio</h6>
+                    </div>
+                    <p class="body2">
+                        Advanced natural language processing solutions powered by
+                        PyDiode framework. Transform your text data with precision and
+                        speed.
+                    </p>
+                    <div class="d-flex gap-sm">
+                        <button class="social-icon">
+                            <span class="material-icons">facebook</span>
+                        </button>
+                        <button class="social-icon">
+                            <span class="material-icons">twitter</span>
+                        </button>
+                        <button class="social-icon">
+                            <span class="material-icons">linkedin</span>
+                        </button>
+                        <button class="social-icon">
+                            <span class="material-icons">github</span>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <h6 class="h6">Product</h6>
+                    <div style="display: flex; flex-direction: column;">
+                        <a href="#features" class="body2" style="text-decoration: none; color: var(--text-secondary);">Features</a>
+                        <a href="#pricing" class="body2" style="text-decoration: none; color: var(--text-secondary);">Pricing</a>
+                        <a href="#documentation" class="body2" style="text-decoration: none; color: var(--text-secondary);">Documentation</a>
+                        <a href="#api" class="body2" style="text-decoration: none; color: var(--text-secondary);">API Reference</a>
+                    </div>
+                </div>
+                <div>
+                    <h6 class="h6">Company</h6>
+                    <div style="display: flex; flex-direction: column;">
+                        <a href="#about" class="body2" style="text-decoration: none; color: var(--text-secondary);">About Us</a>
+                        <a href="#careers" class="body2" style="text-decoration: none; color: var(--text-secondary);">Careers</a>
+                        <a href="#blog" class="body2" style="text-decoration: none; color: var(--text-secondary);">Blog</a>
+                        <a href="#press" class="body2" style="text-decoration: none; color: var(--text-secondary);">Press Kit</a>
+                    </div>
+                </div>
+                <div>
+                    <h6 class="h6">Legal</h6>
+                    <div style="display: flex; flex-direction: column;">
+                        <a href="#privacy" class="body2" style="text-decoration: none; color: var(--text-secondary);">Privacy Policy</a>
+                        <a href="#terms" class="body2" style="text-decoration: none; color: var(--text-secondary);">Terms of Service</a>
+                        <a href="#cookies" class="body2" style="text-decoration: none; color: var(--text-secondary);">Cookie Policy</a>
+                        <a href="#gdpr" class="body2" style="text-decoration: none; color: var(--text-secondary);">GDPR</a>
+                    </div>
+                </div>
+            </div>
+            <hr class="divider">
+            <div class="d-flex justify-between align-center">
+                <p class="body2">© 2024 SearchQuery Studio. All rights reserved.</p>
+                <div class="d-flex gap-lg">
+                    <a href="#privacy" class="body2" style="text-decoration: none; color: var(--text-muted);">Privacy</a>
+                    <a href="#terms" class="body2" style="text-decoration: none; color: var(--text-muted);">Terms</a>
+                    <a href="#cookies" class="body2" style="text-decoration: none; color: var(--text-muted);">Cookies</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Simple form handling
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    alert('Thank you for your message! We will get back to you soon.');
+                    form.reset();
+                });
+            }
+        });
+    
+    setTimeout(()=>{
+        document.getElementById('loadline').classList.remove('net-run');
+        document.querySelector('h3').textContent = 'Search Query Loaded Successfully';
+    
+        setTimeout(()=>{
+            document.getElementById('loadingDiv').style.display = 'none';
+        }, 1000)
+    },10000);
+    
+    
+    </script>
+</body>
+</html>
