@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>search-query translator</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- reuse your existing styles -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>search-query translator</h1>
+    <p>Translate a database/search-platform query into another platform using the <code>search-query</code> package (running in Pyodide).</p>
+  </header>
+
+  <div id="status">Loading Pyodide…</div>
+
+  <label for="query">Query</label>
+  <textarea id="query" rows="6">(TI=(platform* OR "digital work") AND PY=2020-2025)</textarea>
+
+  <label for="platform-source">Source platform</label>
+  <select id="platform-source">
+    <option value="wos">wos</option>
+    <option value="pubmed">pubmed</option>
+    <option value="ebscohost">ebscohost</option>
+    <option value="scopus">scopus</option>
+  </select>
+
+  <label for="platform-target">Target platform</label>
+  <select id="platform-target">
+    <option value="wos">wos</option>
+    <option value="pubmed" selected>pubmed</option>
+    <option value="ebscohost">ebscohost</option>
+    <option value="scopus">scopus</option>
+  </select>
+
+  <div class="row" style="margin-top:1rem;">
+    <button id="btn-translate" disabled>Translate</button>
+  </div>
+
+  <h2 id="result-title" style="display:none; margin-top:1.5rem;">Translated query</h2>
+  <pre id="result" style="display:none;"></pre>
+
+  <h2 id="messages-title" style="display:none; margin-top:1.5rem;">Messages</h2>
+  <div id="messages" style="display:none;"></div>
+
+  <!-- Pyodide runtime -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
+  <!-- your logic (the file I gave you) -->
+  <script src="translate.js"></script>
+</body>
+</html>
