@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Vision Toolkit Documentation</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+    * { box-sizing: border-box; margin:0; padding:0; }
+    body { font-family:'Inter', Arial, sans-serif; background:#f7f8fa; color:#1a1a1a; line-height:1.6; }
+    .sidebar { position: fixed; left:0; top:0; width:220px; height:100%; background:#1f2937; padding:20px; overflow-y:auto; color:#fff; }
+    .sidebar h2 { font-size:1.5rem; margin-bottom:20px; }
+    .sidebar ul { list-style:none; }
+    .sidebar ul li { margin-bottom:12px; }
+    .sidebar ul li a { display:block; padding:6px 10px; border-radius:4px; transition:0.2s; color:#fff; }
+    .sidebar ul li a:hover { background:#4f46e5; }
+
+    .content { margin-left:240px; padding:40px 30px; max-width:900px; }
+
+    h1 { text-align:center; font-size:2.2rem; margin-bottom:40px; }
+    h2 { font-size:1.8rem; color:#4f46e5; margin-top:30px; border-bottom:2px solid #ddd; padding-bottom:5px; margin-bottom:15px; }
+    h3 { font-size:1.3rem; margin-top:20px; margin-bottom:10px; }
+
+    p { margin-bottom:15px; }
+
+    button { background:#4f46e5; color:#fff; border:none; border-radius:5px; padding:10px 18px; margin:5px 0; cursor:pointer; transition:0.3s; font-size:0.95rem; }
+    button:hover { background:#4338ca; }
+
+    input, textarea { width:100%; padding:10px; margin:5px 0 15px; border:1px solid #ccc; border-radius:5px; font-size:1rem; }
+    input:focus, textarea:focus { outline:none; border-color:#4f46e5; }
+
+    .section { background:#fff; border-radius:10px; padding:25px; margin-bottom:25px; box-shadow:0 3px 10px rgba(0,0,0,0.05); transition: transform 0.2s ease; }
+    .section:hover { transform: translateY(-3px); }
+
+    pre { background:#f1f3f5; padding:15px; border-radius:5px; overflow-x:auto; margin-top:10px; display:none; font-size:0.9rem; }
+    .show-code { margin-top:10px; }
+
+    .tab-buttons button.active { background:#4f46e5; color:#fff; }
+    .tab-content { display:none; padding:15px; background:#f1f3f5; border-radius:5px; margin-top:10px; }
+
+    .spark-accordion { background:#4f46e5; color:#fff; cursor:pointer; padding:12px 18px; margin-top:10px; border-radius:5px; transition:0.3s; }
+    .spark-accordion:hover { background:#4338ca; }
+    .spark-accordion-panel { display:none; padding:10px 18px; background:#f1f3f5; border-radius:5px; margin-bottom:10px; }
+
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>Vision Toolkit</h2>
+    <ul>
+        <li><a href="#dark-mode">Dark Mode</a></li>
+        <li><a href="#toast">Toast</a></li>
+        <li><a href="#modal">Modal</a></li>
+    </ul>
+</div>
+
+<div class="content">
+    <h1>Vision Toolkit Documentation</h1>
+
+    <!-- Dark Mode -->
+    <div id="dark-mode" class="section">
+        <h2>Dark Mode</h2>
+        <p>Toggle between light and dark mode for your documentation page.</p>
+        <button onclick="visionDarkMode()">Toggle Dark Mode</but/ton>
+        <button class="show-code" onclick="toggleCode(this)">View Code</button>
+        <pre>&lt;button onclick="visionDarkMode()"&gt;Toggle Dark Mode&lt;/button&gt;</pre>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="section">
+        <h2>Toast Notifications</h2>
+        <p>Show temporary messages to users.</p>
+        <button onclick="visionToast(message = 'This is a toast message!')">Show Toast</button>
+        <button class="show-code" onclick="toggleCode(this)">View Code</button>
+        <pre>&lt;button onclick="visionToast('This is a toast message!')"&gt;Show Toast&lt;/button&gt;</pre>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="section">
+        <h2>Modal</h2>
+        <p>Create pop-up modals with custom content.</p>
+        <button onclick="sparkModal('Modal Title', 'This is the modal content')">Open Modal</button>
+        <button class="show-code" onclick="toggleCode(this)">View Code</button>
+        <pre>&lt;button onclick="sparkModal('Modal Title', 'This is the modal content')"&gt;Open Modal&lt;/button&gt;</pre>
+    </div>
+</div>
+
+<script src="vision.js"></script>
+<script>
+    function toggleCode(btn) {
+        const pre = btn.nextElementSibling;
+        if (pre.style.display === "block") pre.style.display = "none";
+        else pre.style.display = "block";
+    }
+
+    // Initialize vision.js components
+    visionScrollReveal();
+    sparkCharCount("#charInput", "#charCounter");
+    sparkCountdown("Jan 1, 2026 00:00:00", "#countdownDisplay");
+    sparkTabs(".tab-buttons button", ".tab-content");
+    sparkAccordion(".spark-accordion");
+    sparkSlider(".spark-slider");
+    sparkPasswordCheck("#passwordInput", "#passwordBar");
+    sparkFilter("#searchInput", ".item");
+</script>
+
+</body>
+</html>
