@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Book Generator (Secure & Persistent)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3498db;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .hidden { display: none; }
+  </style>
+</head>
+
+<body class="bg-gray-100 flex flex-col items-center justify-start min-h-screen p-4">
+
+  <div class="bg-white shadow-xl rounded-2xl w-full max-w-lg p-8 overflow-y-auto">
+    <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">AI Book Generator</h1>
+
+    <form id="bookForm" class="space-y-4">
+      <input type="text" id="title" placeholder="Book Title*" required class="w-full px-4 py-2 border rounded-lg outline-none">
+      <input type="text" id="subtitle" placeholder="Book Subtitle" class="w-full px-4 py-2 border rounded-lg outline-none">
+      
+      <div class="grid grid-cols-2 gap-4">
+        <input type="number" id="chapters" placeholder="Chapters*" required min="1" class="px-4 py-2 border rounded-lg">
+        <input type="number" id="pages" placeholder="Total Pages*" required min="1" class="px-4 py-2 border rounded-lg">
+      </div>
+
+      <input type="text" id="genre" placeholder="Genre*" required class="w-full px-4 py-2 border rounded-lg">
+      <input type="text" id="tone" placeholder="Tone*" required class="w-full px-4 py-2 border rounded-lg">
+      
+      <select id="deliveryMethod" required class="w-full px-4 py-2 border rounded-lg">
+        <option value="">Select Delivery Method*</option>
+        <option value="email">Email</option>
+        <option value="whatsapp">WhatsApp</option>
+      </select>
+      
+      <input type="email" id="email" placeholder="Email Address" class="w-full px-4 py-2 border rounded-lg">
+      <input type="text" id="phone" placeholder="Phone Number" class="w-full px-4 py-2 border rounded-lg">
+
+      <button type="submit" id="submitBtn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-lg flex items-center justify-center">
+        <span id="btnText">Generate My Book</span>
+        <div id="btnLoader" class="loader hidden ml-2"></div>
+      </button>
+    </form>
+    
+    <button id="clearBtn" class="w-full mt-4 text-sm text-red-500 hover:underline">Clear Saved Book</button>
+  </div>
+
+  <div id="book-preview" class="w-full max-w-3xl mt-6 bg-white p-8 rounded-xl shadow hidden"></div>
+  
+  <button id="download-pdf" class="fixed bottom-10 right-10 px-8 py-4 bg-blue-600 text-white font-bold rounded-full shadow-2xl hover:bg-blue-700 hidden">
+    Download PDF
+  </button>
+
+  <script>
+    const { jsPDF } = window.jspdf;
+    const form = document.getElementById("bookForm");
+    const previewContainer = document.getElementById("book-preview");
+    const downloadBtn = document.getElementById("download-pdf");
+    const btnText = document.getElementById("btnText");
+    const btnLoader = document.getElementById("btnLoader");
+    const submitBtn = document.getElementById("submitBtn");
+    const clearBtn = document.getElementById("clearBtn");
+
+    let currentPdf = null;
+
+    // Helper: Save to LocalStorage
+    function saveToStore(data) {
+      localStorage.setItem("saved_book", JSON.stringify(data));
+    }
+
+    // Helper: Create Book UI from Data
+    function renderBook(data) {
+      // Clear container safely
+      while (previewContainer.firstChild) {
+        previewContainer.removeChild(previewContainer.firstChild);
+      }
+
+      const h1 = document.createElement("h1");
+      h1.className = "text-4xl font-bold text-center mb-2";
+      h1.textContent = data.bookTitle;
+      previewContainer.appendChild(h1);
+
+      if (data.bookSubtitle) {
+        const pSub = document.createElement("p");
+        pSub.className = "text-xl text-center italic text-gray-600 mb-10";
+        pSub.textContent = data.bookSubtitle;
+        previewContainer.appendChild(pSub);
+      }
+
+      data.chapters.forEach((content, i) => {
+        const div = document.createElement("div");
+        div.className = "mb-8";
+
+        const h2 = document.createElement("h2");
+        h2.className = "text-2xl font-bold border-b pb-2 mb-4";
+        h2.textContent = "Chapter " + (i + 1);
+
+        const pContent = document.createElement("div");
+        pContent.className = "text-gray-700 leading-relaxed whitespace-pre-line";
+        pContent.textContent = content;
+
+        div.appendChild(h2);
+        div.appendChild(pContent);
+        previewContainer.appendChild(div);
+      });
+
+      previewContainer.classList.remove("hidden");
+      downloadBtn.classList.remove("hidden");
+      preparePDF(data);
+    }
+
+    // PDF Logic
+    function preparePDF(data) {
+      const doc = new jsPDF();
+      const margin = 20;
+      const width = 170;
+      let y = 40;
+
+      doc.setFontSize(22);
+      doc.text(data.bookTitle, 105, 80, { align: "center" });
+      
+      data.chapters.forEach((content, i) => {
+        doc.addPage();
+        y = 30;
+        doc.setFontSize(18);
+        doc.setFont(undefined, "bold");
+        doc.text("Chapter " + (i + 1), margin, y);
+        y += 15;
+
+        doc.setFontSize(12);
+        doc.setFont(undefined, "normal");
+        const lines = doc.splitTextToSize(content, width);
+        
+        lines.forEach(line => {
+          if (y > 280) {
+            doc.addPage();
+            y = 20;
+          }
+          doc.text(line, margin, y);
+          y += 7;
+        });
+      });
+      currentPdf = doc;
+    }
+
+    // Load from storage on startup
+    window.addEventListener("DOMContentLoaded", () => {
+      const saved = localStorage.getItem("saved_book");
+      if (saved) {
+        renderBook(JSON.parse(saved));
+      }
+    });
+
+    // Form Submission
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      submitBtn.disabled = true;
+      btnLoader.classList.remove("hidden");
+      btnText.textContent = "Generating...";
+
+      const payload = {
+        title: document.getElementById("title").value,
+        subtitle: document.getElementById("subtitle").value,
+        chapters: Number(document.getElementById("chapters").value),
+        pages: Number(document.getElementById("pages").value),
+        genre: document.getElementById("genre").value,
+        tone: document.getElementById("tone").value,
+        deliveryMethod: document.getElementById("deliveryMethod").value,
+        email: document.getElementById("email").value,
+        phone: document.getElementById("phone").value
+      };
+
+      try {
+        const response = await fetch("https://seraphielspark.app.n8n.cloud/webhook/book-request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        
+        // Ensure structure: { bookTitle: "", bookSubtitle: "", chapters: ["", ""] }
+        saveToStore(result);
+        renderBook(result);
+
+      } catch (err) {
+        alert("Error generating book. Check console.");
+        console.error(err);
+      } finally {
+        submitBtn.disabled = false;
+        btnLoader.classList.add("hidden");
+        btnText.textContent = "Generate My Book";
+      }
+    });
+
+    downloadBtn.addEventListener("click", () => {
+      if (currentPdf) {
+        currentPdf.save("MyBook.pdf");
+      }
+    });
+
+    clearBtn.addEventListener("click", () => {
+      localStorage.removeItem("saved_book");
+      location.reload();
+    });
+  </script>
+</body>
+</html>
