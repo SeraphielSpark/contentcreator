@@ -1,0 +1,143 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "cdd6e003-e4c6-4317-818b-725b6a633b94",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Act as a gym instructor, and provide me a workout scheme for the day.\n\n\n",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are an Ai Chatbot, that delivers messages to a user to help them improve there workout daily healthy skill.\n\n\ndo not deliver your response like an ai, add respect, greetings first, then your daily workout response.\n\ndo not include ai first note like:Absolutely! Here’s a balanced full-body workout scheme for today that targets strength, endurance, and flexibility. Make sure to warm up before starting and cool down/stretch after.\\n\\n---\\n\\n### **Full-Body Workout Plan**\\n\\n**Warm-up (5-10 minutes):**\nand greet the user, using the specific date which is{{ $json['Readable date'] }} , day of the weak which is {{ $json['Day of week'] }} and so on\ndo not add \"*\", \"#\", should be writting in human form"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        176,
+        -96
+      ],
+      "id": "82901583-4121-4aa6-9ab7-eb3ec29c8fb0",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        192,
+        128
+      ],
+      "id": "20c9503f-cf68-4b1b-a1e0-90de5ef88b9a",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "3GX38mvljMSBfbpL",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "=thebluematrix27@gmail.com",
+        "subject": "Daily Workout Flow From ChatGPT",
+        "emailType": "text",
+        "message": "={{ $json.text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        528,
+        -96
+      ],
+      "id": "109c8894-0872-4c20-a665-a642a8dcdbb3",
+      "name": "Send a message",
+      "webhookId": "df652087-e13f-4b12-bcc1-e19850b65774",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "sTXKGBS4LPrSrTIL",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "71bcc2d0-6c16-40f3-95e0-3df4948cb992",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "007b15320bb4d573efa5de4d99707b6e149219b15a13225ba9ffd91ae5a656f5"
+  },
+  "id": "M3G8D28fVjVgQHJfHSLTD",
+  "tags": []
+}
