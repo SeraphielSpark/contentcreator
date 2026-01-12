@@ -1,0 +1,154 @@
+{
+  "name": "My workflow 2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "signup",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -48,
+        -32
+      ],
+      "id": "5984b73f-d5e6-4ae1-966e-de667c6f1f5d",
+      "name": "Webhook",
+      "webhookId": "ab2ad515-8ce2-46b7-8c8e-87be294939ae"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appPGvkRfZOqMofPi",
+          "mode": "list",
+          "cachedResultName": "New Base",
+          "cachedResultUrl": "https://airtable.com/appPGvkRfZOqMofPi"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblgvwktA3SZmptCh",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/appPGvkRfZOqMofPi/tblgvwktA3SZmptCh"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.body.name }}",
+            "password": "={{ $json.body.password }}",
+            "email": "={{ $json.body.email }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "password",
+              "displayName": "password",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        208,
+        -48
+      ],
+      "id": "5abbcae4-b40e-4913-9e6a-7b2ae3014431",
+      "name": "Create a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "OM8Fhh8texpRegbe",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"message\": \"Sign Up Successful, Please Check Your Email\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        416,
+        -48
+      ],
+      "id": "5ac4fbd7-6e26-4d8a-9a64-10406346f9b0",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Create a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a record": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "a43dc77d-220e-4243-bd27-697d57e70c38",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "007b15320bb4d573efa5de4d99707b6e149219b15a13225ba9ffd91ae5a656f5"
+  },
+  "id": "UPo65xhOkZ_h_Ri6NYsXy",
+  "tags": []
+}
