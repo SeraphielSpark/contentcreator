@@ -1,0 +1,255 @@
+{
+  "name": "My workflow 2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "signup",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -48,
+        -32
+      ],
+      "id": "5984b73f-d5e6-4ae1-966e-de667c6f1f5d",
+      "name": "Webhook",
+      "webhookId": "ab2ad515-8ce2-46b7-8c8e-87be294939ae"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appPGvkRfZOqMofPi",
+          "mode": "list",
+          "cachedResultName": "New Base",
+          "cachedResultUrl": "https://airtable.com/appPGvkRfZOqMofPi"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblgvwktA3SZmptCh",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/appPGvkRfZOqMofPi/tblgvwktA3SZmptCh"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.body.name }}",
+            "password": "={{ $json.body.password }}",
+            "email": "={{ $json.body.email }}",
+            "userid": "={{ $execution.id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "password",
+              "displayName": "password",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "userid",
+              "displayName": "userid",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        208,
+        -48
+      ],
+      "id": "5abbcae4-b40e-4913-9e6a-7b2ae3014431",
+      "name": "Create a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "OM8Fhh8texpRegbe",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"message\": \"Sign Up Successful, Please Check Your Email\",\n  \"userid\": \"{{$json.fields.userid}}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        416,
+        -48
+      ],
+      "id": "5ac4fbd7-6e26-4d8a-9a64-10406346f9b0",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "login",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -48,
+        -208
+      ],
+      "id": "e8ccc8db-8ede-4170-b21b-cba84a98e3b7",
+      "name": "Webhook1",
+      "webhookId": "ab2ad515-8ce2-46b7-8c8e-87be294939ae"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"message\": \"Login In Successful\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        416,
+        -224
+      ],
+      "id": "c0d16ae3-4dcd-40dd-a2d8-4eb98e90f7e7",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appPGvkRfZOqMofPi",
+          "mode": "list",
+          "cachedResultName": "New Base",
+          "cachedResultUrl": "https://airtable.com/appPGvkRfZOqMofPi"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblgvwktA3SZmptCh",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/appPGvkRfZOqMofPi/tblgvwktA3SZmptCh"
+        },
+        "filterByFormula": "={userid} = {{ $json.body.userid }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        208,
+        -224
+      ],
+      "id": "df4d873b-5c1d-4dc1-b1a5-6bbe9eac08fe",
+      "name": "Search records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "OM8Fhh8texpRegbe",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Create a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a record": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "b26001de-ccbd-4bdf-8eb3-2a486428555f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "007b15320bb4d573efa5de4d99707b6e149219b15a13225ba9ffd91ae5a656f5"
+  },
+  "id": "UPo65xhOkZ_h_Ri6NYsXy",
+  "tags": []
+}
