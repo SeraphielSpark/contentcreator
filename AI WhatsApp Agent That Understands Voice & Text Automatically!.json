@@ -1,0 +1,381 @@
+{
+  "name": "AI WhatsApp Agent That Understands Voice & Text Automatically!",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-in",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1248,
+        -528
+      ],
+      "id": "86cb1a1b-4def-458d-9c7b-0aa9790d22bc",
+      "name": "Webhook",
+      "webhookId": "a5d9ab81-f65f-4427-9e8e-380508fa9618"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "988cc16d-005d-4e2d-9ad2-372582b69c6d",
+              "leftValue": "={{ $json.body.NumMedia }}",
+              "rightValue": "=0",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1024,
+        -528
+      ],
+      "id": "ed5a43c1-9c3f-495f-93df-7290f5c9d5ab",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.MediaUrl0 }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twilioApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "=user_audio"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -800,
+        -624
+      ],
+      "id": "a21ba5bc-c272-4eb6-ae17-46e5efd9446e",
+      "name": "HTTP Request3",
+      "credentials": {
+        "twilioApi": {
+          "id": "Mj4P0DkZA2RhHAv7",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.deepgram.com/v1/listen",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "=Authorization",
+              "value": "=Token dc9984e5fb1cae5411f141ae8dd93ec505013ccb"
+            },
+            {
+              "name": "=Content-Type",
+              "value": "=application/octet-stream"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "=user_audio",
+        "options": {
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -576,
+        -624
+      ],
+      "id": "afc8a451-6e47-4ef1-84f0-9f6d6a84f798",
+      "name": "HTTP Request4"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -120,
+        -304
+      ],
+      "id": "48aeee02-6795-48b3-9c6f-0456e718afe9",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "3GX38mvljMSBfbpL",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "from": "=+14155238886",
+        "to": "=+2349162720644",
+        "toWhatsapp": true,
+        "message": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        224,
+        -528
+      ],
+      "id": "d63fea5f-f5a9-40dc-adb0-1d47621a1ddf",
+      "name": "Send an SMS/MMS/WhatsApp message",
+      "credentials": {
+        "twilioApi": {
+          "id": "Mj4P0DkZA2RhHAv7",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "86c279e0-c525-4c52-bbcd-34de148dafdc",
+              "name": "=text",
+              "value": "={{$json[\"results\"][\"channels\"][0][\"alternatives\"][0][\"transcript\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "8df1e974-1f13-4131-b0e8-71b2639ade0c",
+              "name": "=user",
+              "value": "={{ $node[\"HTTP Request3\"].json.body.From }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -352,
+        -624
+      ],
+      "id": "9c21df25-b308-48ec-99c2-82bf5c702e32",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e4d71a39-958d-496a-93c9-eb54d51718bc",
+              "name": "=text",
+              "value": "={{ $json.body.Body }}",
+              "type": "string"
+            },
+            {
+              "id": "a4b8adb4-6b82-4b6d-9521-24dc0d8d8e4b",
+              "name": "=user",
+              "value": "={{$json.body.From}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -608,
+        -320
+      ],
+      "id": "c2894ffc-280c-4fcf-998c-19129b034199",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an intelligent, friendly, and professional virtual assistant that can answer questions, give advice, and respond naturally. \nRespond in clear, concise sentences suitable for a voice reply. \nMake sure your answers are polite, accurate, and engaging. and dont add markdown like \"\", /,\\, or any\n\nUser said: \"{{$json.text}}\"\n\nRespond as if you are speaking directly to the user.\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -128,
+        -528
+      ],
+      "id": "5cdc9efc-e791-4043-b51e-97ba0646490c",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.user }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        8,
+        -304
+      ],
+      "id": "8cd84a5c-4faf-4277-b80f-aa2203faff4e",
+      "name": "Simple Memory1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request4": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "4045058e-08b5-4836-aa04-9d74d32fec5d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "007b15320bb4d573efa5de4d99707b6e149219b15a13225ba9ffd91ae5a656f5"
+  },
+  "id": "xyATy0ol2PLoZjG49jYq5",
+  "tags": []
+}
