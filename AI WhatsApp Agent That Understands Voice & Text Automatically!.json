@@ -81,7 +81,7 @@
       "name": "HTTP Request3",
       "credentials": {
         "twilioApi": {
-          "id": "Mj4P0DkZA2RhHAv7",
+          "id": "",
           "name": "Twilio account"
         }
       }
@@ -95,7 +95,7 @@
           "parameters": [
             {
               "name": "=Authorization",
-              "value": "=Token dc9984e5fb1cae5411f141ae8dd93ec505013ccb"
+              "value": ""
             },
             {
               "name": "=Content-Type",
@@ -148,8 +148,8 @@
     },
     {
       "parameters": {
-        "from": "=+14155238886",
-        "to": "=+2349162720644",
+        "from": "",
+        "to": "",
         "toWhatsapp": true,
         "message": "={{ $json.output }}",
         "options": {}
@@ -160,11 +160,11 @@
         224,
         -528
       ],
-      "id": "d63fea5f-f5a9-40dc-adb0-1d47621a1ddf",
+      "id": "",
       "name": "Send an SMS/MMS/WhatsApp message",
       "credentials": {
         "twilioApi": {
-          "id": "Mj4P0DkZA2RhHAv7",
+          "id": "",
           "name": "Twilio account"
         }
       }
